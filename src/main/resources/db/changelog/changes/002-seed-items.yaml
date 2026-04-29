@@ -14,7 +14,7 @@ databaseChangeLog:
                   value: Classic size 5 football ball for training and matches.
               - column:
                   name: img_path
-                  value: /images/ball.jpg
+                  value: images/ball.jpg
               - column:
                   name: price
                   valueNumeric: 2500
@@ -29,7 +29,7 @@ databaseChangeLog:
                   value: Lightweight racket suitable for beginners and hobby players.
               - column:
                   name: img_path
-                  value: /images/racket.jpg
+                  value: images/racket.jpg
               - column:
                   name: price
                   valueNumeric: 6900
@@ -44,7 +44,7 @@ databaseChangeLog:
                   value: Reusable 750ml bottle for workouts and outdoor activities.
               - column:
                   name: img_path
-                  value: /images/bottle.jpg
+                  value: images/bottle.jpg
               - column:
                   name: price
                   valueNumeric: 990
