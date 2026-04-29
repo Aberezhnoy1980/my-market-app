@@ -1,0 +1,50 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-seed-items
+      author: assistant
+      changes:
+        - insert:
+            tableName: items
+            columns:
+              - column:
+                  name: title
+                  value: Football Ball
+              - column:
+                  name: description
+                  value: Classic size 5 football ball for training and matches.
+              - column:
+                  name: img_path
+                  value: /images/ball.jpg
+              - column:
+                  name: price
+                  valueNumeric: 2500
+        - insert:
+            tableName: items
+            columns:
+              - column:
+                  name: title
+                  value: Tennis Racket
+              - column:
+                  name: description
+                  value: Lightweight racket suitable for beginners and hobby players.
+              - column:
+                  name: img_path
+                  value: /images/racket.jpg
+              - column:
+                  name: price
+                  valueNumeric: 6900
+        - insert:
+            tableName: items
+            columns:
+              - column:
+                  name: title
+                  value: Sports Bottle
+              - column:
+                  name: description
+                  value: Reusable 750ml bottle for workouts and outdoor activities.
+              - column:
+                  name: img_path
+                  value: /images/bottle.jpg
+              - column:
+                  name: price
+                  valueNumeric: 990
