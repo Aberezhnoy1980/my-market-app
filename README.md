@@ -12,14 +12,6 @@
 
 Учебное web-приложение «Витрина интернет-магазина» на blocking stack (`Spring MVC`).
 
-## Текущий статус
-
-- Проект инициализирован из предоставленного skeleton.
-- Thymeleaf templates уже находятся в `src/main/resources/templates`.
-- Реализованы основные контроллеры, service layer и data layer.
-- Добавлены unit, `@WebMvcTest` и интеграционные тесты.
-- Настроены Dockerfile и `docker-compose.yml`.
-
 ## Технологический стек
 
 - Java 21
@@ -32,7 +24,26 @@
 - Docker
 - GitHub Actions (CI)
 
-## Структура проекта
+## Функциональность
+
+- Витрина товаров: поиск, сортировка, пагинация, изменение количества в корзине.
+- Страница товара: просмотр деталей и изменение количества.
+- Корзина: список позиций, изменение количества, удаление, подсчет суммы.
+- Заказы: оформление покупки, список заказов, страница конкретного заказа.
+
+## Эндпоинты
+
+- `GET /` и `GET /items` — витрина.
+- `POST /items` — изменение количества товара на витрине.
+- `GET /items/{id}` — страница товара.
+- `POST /items/{id}` — изменение количества на странице товара.
+- `GET /cart/items` — корзина.
+- `POST /cart/items` — изменение корзины (`PLUS`/`MINUS`/`DELETE`).
+- `POST /buy` — оформление заказа.
+- `GET /orders` — список заказов.
+- `GET /orders/{id}` — страница заказа.
+
+## Структура проекта (кратко)
 
 - `src/main/java` — application code.
 - `src/main/resources/templates` — Thymeleaf pages (`items`, `item`, `cart`, `orders`, `order`).
@@ -63,6 +74,12 @@
 
 - `default`/`main`: PostgreSQL + Liquibase.
 - `test`: H2 + test-friendly configuration.
+
+Параметры подключения для main profile можно переопределить через env:
+
+- `SPRING_DATASOURCE_URL`
+- `SPRING_DATASOURCE_USERNAME`
+- `SPRING_DATASOURCE_PASSWORD`
 
 ## Тесты
 
@@ -99,6 +116,8 @@ docker run --rm -p 8080:8080 my-market-app:local
 docker compose up --build
 ```
 
+После старта приложение доступно по адресу: `http://localhost:8080`.
+
 ## CI
 
 GitHub Actions workflow:
@@ -107,9 +126,3 @@ GitHub Actions workflow:
 - Liquibase migration check в test context (H2)
 
 Workflow file: `.github/workflows/ci.yml`.
-
-## Рабочий процесс спринта
-
-- Разработка идет маленькими логическими инкрементами.
-- Один логический шаг = один commit.
-- Перед переходом к следующей итерации CI должен быть green.
