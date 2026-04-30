@@ -16,7 +16,9 @@
 
 - Проект инициализирован из предоставленного skeleton.
 - Thymeleaf templates уже находятся в `src/main/resources/templates`.
-- Business logic, data model и tests реализуются поэтапно.
+- Реализованы основные контроллеры, service layer и data layer.
+- Добавлены unit, `@WebMvcTest` и интеграционные тесты.
+- Настроены Dockerfile и `docker-compose.yml`.
 
 ## Технологический стек
 
@@ -37,7 +39,7 @@
 - `src/main/resources/static` — static assets.
 - `src/test/java` — unit/integration tests.
 
-## Локальный запуск (будет уточняться)
+## Локальный запуск
 
 Требования:
 
@@ -51,26 +53,24 @@
 ./mvnw -B clean verify
 ```
 
-Запуск приложения:
+Запуск приложения (profile по умолчанию, PostgreSQL):
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-## Профили (планируемый контракт)
+## Профили
 
 - `default`/`main`: PostgreSQL + Liquibase.
 - `test`: H2 + test-friendly configuration.
 
-Точные profile properties и launch commands будут уточняться по мере реализации.
-
 ## Тесты
 
-Планируемые уровни тестирования:
+Покрытие:
 
 - Unit tests для service logic.
 - `@WebMvcTest` для MVC contracts.
-- `@DataJpaTest` для repository behavior.
+- интеграционные repository тесты с `@SpringBootTest` + H2 profile.
 - `@SpringBootTest` для smoke/integration scenarios.
 
 Запуск тестов:
@@ -79,7 +79,7 @@
 ./mvnw -B test
 ```
 
-## Docker (будет уточняться)
+## Docker
 
 Сборка образа:
 
@@ -93,6 +93,12 @@ docker build -t my-market-app:local .
 docker run --rm -p 8080:8080 my-market-app:local
 ```
 
+Запуск приложения вместе с PostgreSQL:
+
+```bash
+docker compose up --build
+```
+
 ## CI
 
 GitHub Actions workflow:
@@ -100,7 +106,7 @@ GitHub Actions workflow:
 - `mvn -B verify`
 - Liquibase migration check в test context (H2)
 
-Workflow file: `.github/workflows/ci.yml` (будет добавлен на следующей итерации).
+Workflow file: `.github/workflows/ci.yml`.
 
 ## Рабочий процесс спринта
 
