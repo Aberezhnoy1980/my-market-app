@@ -3,6 +3,7 @@ package ru.yandex.practicum.mymarket.service;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.ChangeAction;
 import ru.yandex.practicum.mymarket.model.Item;
+import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.ItemRepository;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -29,6 +31,9 @@ class CartServiceTest {
 
     @Mock
     private ItemRepository itemRepository;
+
+    @Spy
+    private ItemViewMapper itemViewMapper = new ItemViewMapper();
 
     @InjectMocks
     private CartService cartService;

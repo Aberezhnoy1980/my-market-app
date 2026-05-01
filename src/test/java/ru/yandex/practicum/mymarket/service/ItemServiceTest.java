@@ -3,6 +3,7 @@ package ru.yandex.practicum.mymarket.service;
 import ru.yandex.practicum.mymarket.dto.ItemView;
 import ru.yandex.practicum.mymarket.dto.ItemsPageView;
 import ru.yandex.practicum.mymarket.dto.PagingView;
+import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.data.domain.PageImpl;
@@ -32,6 +34,9 @@ class ItemServiceTest {
 
     @Mock
     private CartItemRepository cartItemRepository;
+
+    @Spy
+    private ItemViewMapper itemViewMapper = new ItemViewMapper();
 
     @InjectMocks
     private ItemService itemService;

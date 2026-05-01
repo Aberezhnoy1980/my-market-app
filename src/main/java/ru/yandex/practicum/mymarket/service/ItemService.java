@@ -3,6 +3,7 @@ package ru.yandex.practicum.mymarket.service;
 import ru.yandex.practicum.mymarket.dto.ItemView;
 import ru.yandex.practicum.mymarket.dto.ItemsPageView;
 import ru.yandex.practicum.mymarket.dto.PagingView;
+import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
@@ -32,10 +33,16 @@ public class ItemService {
 
     private final ItemRepository itemRepository;
     private final CartItemRepository cartItemRepository;
+    private final ItemViewMapper itemViewMapper;
 
-    public ItemService(ItemRepository itemRepository, CartItemRepository cartItemRepository) {
+    public ItemService(
+            ItemRepository itemRepository,
+            CartItemRepository cartItemRepository,
+            ItemViewMapper itemViewMapper
+    ) {
         this.itemRepository = itemRepository;
         this.cartItemRepository = cartItemRepository;
+        this.itemViewMapper = itemViewMapper;
     }
 
     public ItemsPageView getItemsPage(String search, SortType sortType, int pageNumber, int pageSize) {
@@ -52,7 +59,7 @@ public class ItemService {
         Map<Long, Integer> counts = getCartCounts();
 
         List<ItemView> itemViews = page.getContent().stream()
-                .map(item -> toItemView(item, counts.getOrDefault(item.getId(), 0)))
+                .map(item -> itemViewMapper.toView(item, counts.getOrDefault(item.getId(), 0)))
                 .toList();
 
         return new ItemsPageView(
@@ -72,7 +79,7 @@ public class ItemService {
         int count = cartItemRepository.findByItemId(id)
                 .map(CartItem::getCount)
                 .orElse(0);
-        return toItemView(item, count);
+        return itemViewMapper.toView(item, count);
     }
 
     private Specification<Item> buildSearchSpecification(String search) {
@@ -117,14 +124,4 @@ public class ItemService {
                 .collect(Collectors.toMap(ci -> ci.getItem().getId(), CartItem::getCount));
     }
 
-    private ItemView toItemView(Item item, int count) {
-        return new ItemView(
-                item.getId(),
-                item.getTitle(),
-                item.getDescription(),
-                item.getImgPath(),
-                item.getPrice(),
-                count
-        );
-    }
 }

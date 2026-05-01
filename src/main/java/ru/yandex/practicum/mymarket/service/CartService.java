@@ -1,6 +1,7 @@
 package ru.yandex.practicum.mymarket.service;
 
 import ru.yandex.practicum.mymarket.dto.ItemView;
+import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.ChangeAction;
 import ru.yandex.practicum.mymarket.model.Item;
@@ -20,10 +21,16 @@ public class CartService {
 
     private final CartItemRepository cartItemRepository;
     private final ItemRepository itemRepository;
+    private final ItemViewMapper itemViewMapper;
 
-    public CartService(CartItemRepository cartItemRepository, ItemRepository itemRepository) {
+    public CartService(
+            CartItemRepository cartItemRepository,
+            ItemRepository itemRepository,
+            ItemViewMapper itemViewMapper
+    ) {
         this.cartItemRepository = cartItemRepository;
         this.itemRepository = itemRepository;
+        this.itemViewMapper = itemViewMapper;
     }
 
     public Map<Long, Integer> getCountByItemId() {
@@ -34,7 +41,7 @@ public class CartService {
     public List<ItemView> getCartItems() {
         List<CartItem> cartItems = cartItemRepository.findAll();
         return cartItems.stream()
-                .map(ci -> toItemView(ci.getItem(), ci.getCount()))
+                .map(ci -> itemViewMapper.toView(ci.getItem(), ci.getCount()))
                 .toList();
     }
 
@@ -87,16 +94,5 @@ public class CartService {
         cartItem.setItem(item);
         cartItem.setCount(0);
         return cartItem;
-    }
-
-    private ItemView toItemView(Item item, int count) {
-        return new ItemView(
-                item.getId(),
-                item.getTitle(),
-                item.getDescription(),
-                item.getImgPath(),
-                item.getPrice(),
-                count
-        );
     }
 }
