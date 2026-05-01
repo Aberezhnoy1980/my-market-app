@@ -1,5 +1,6 @@
 package ru.yandex.practicum.mymarket.service;
 
+import ru.yandex.practicum.mymarket.exception.EmptyCartException;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.CustomerOrder;
 import ru.yandex.practicum.mymarket.model.Item;
@@ -41,7 +42,7 @@ class OrderServiceTest {
         when(cartService.getCartSnapshot()).thenReturn(List.of());
 
         assertThatThrownBy(() -> orderService.placeOrder())
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(EmptyCartException.class)
                 .hasMessageContaining("empty");
     }
 

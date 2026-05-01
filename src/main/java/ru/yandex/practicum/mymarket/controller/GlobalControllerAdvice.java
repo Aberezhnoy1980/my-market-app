@@ -1,6 +1,7 @@
 package ru.yandex.practicum.mymarket.controller;
 
-import jakarta.persistence.EntityNotFoundException;
+import ru.yandex.practicum.mymarket.exception.EmptyCartException;
+import ru.yandex.practicum.mymarket.exception.NotFoundException;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,8 +11,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class GlobalControllerAdvice {
 
     @ExceptionHandler({
-            EntityNotFoundException.class,
-            IllegalStateException.class,
+            NotFoundException.class,
+            EmptyCartException.class,
             MethodArgumentTypeMismatchException.class,
             IllegalArgumentException.class
     })

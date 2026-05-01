@@ -87,7 +87,7 @@
 
 - Unit tests для service logic.
 - `@WebMvcTest` для MVC contracts.
-- интеграционные repository тесты с `@SpringBootTest` + H2 profile.
+- `@DataJpaTest` для repository + Liquibase на H2 (`application-test.properties` в `src/test/resources`).
 - `@SpringBootTest` для smoke/integration scenarios.
 
 Запуск тестов:

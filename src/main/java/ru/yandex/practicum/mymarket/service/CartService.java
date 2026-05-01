@@ -4,9 +4,9 @@ import ru.yandex.practicum.mymarket.dto.ItemView;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.ChangeAction;
 import ru.yandex.practicum.mymarket.model.Item;
+import ru.yandex.practicum.mymarket.exception.ItemNotFoundException;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.ItemRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,7 +82,7 @@ public class CartService {
 
     private CartItem createNewCartItem(long itemId) {
         Item item = itemRepository.findById(itemId)
-                .orElseThrow(() -> new EntityNotFoundException("Item not found: " + itemId));
+                .orElseThrow(() -> new ItemNotFoundException(itemId));
         CartItem cartItem = new CartItem();
         cartItem.setItem(item);
         cartItem.setCount(0);

@@ -5,9 +5,10 @@ import ru.yandex.practicum.mymarket.dto.OrderView;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.CustomerOrder;
 import ru.yandex.practicum.mymarket.model.OrderItem;
+import ru.yandex.practicum.mymarket.exception.EmptyCartException;
+import ru.yandex.practicum.mymarket.exception.OrderNotFoundException;
 import ru.yandex.practicum.mymarket.repository.CustomerOrderRepository;
 import ru.yandex.practicum.mymarket.repository.OrderItemRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +36,7 @@ public class OrderService {
     public long placeOrder() {
         List<CartItem> cartItems = cartService.getCartSnapshot();
         if (cartItems.isEmpty()) {
-            throw new IllegalStateException("Cart is empty");
+            throw new EmptyCartException();
         }
 
         long total = cartItems.stream()
@@ -70,7 +71,7 @@ public class OrderService {
 
     public OrderView getOrderById(long orderId) {
         CustomerOrder order = customerOrderRepository.findById(orderId)
-                .orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
+                .orElseThrow(() -> new OrderNotFoundException(orderId));
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(orderId);
         return toOrderView(order, orderItems);
     }

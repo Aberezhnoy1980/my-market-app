@@ -6,9 +6,9 @@ import ru.yandex.practicum.mymarket.dto.PagingView;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
+import ru.yandex.practicum.mymarket.exception.ItemNotFoundException;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.ItemRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -68,7 +68,7 @@ public class ItemService {
 
     public ItemView getItemById(long id) {
         Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Item not found: " + id));
+                .orElseThrow(() -> new ItemNotFoundException(id));
         int count = cartItemRepository.findByItemId(id)
                 .map(CartItem::getCount)
                 .orElse(0);
