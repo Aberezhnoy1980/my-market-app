@@ -26,20 +26,26 @@ class ItemRepositoryIntegrationTest {
     @DynamicPropertySource
     static void registerPostgresProperties(DynamicPropertyRegistry registry) {
         postgres.start();
+        // Один источник правды: R2DBC URL выводим из JDBC URL контейнера, чтобы host/port/database
+        // совпадали с тем, куда Liquibase катает миграции (иначе 42P01 на CI).
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        registry.add(
-                "spring.r2dbc.url",
-                () -> String.format(
-                        "r2dbc:postgresql://%s:%d/%s",
-                        postgres.getHost(),
-                        postgres.getMappedPort(PostgreSQLContainer.POSTGRESQL_PORT),
-                        postgres.getDatabaseName()));
+        registry.add("spring.r2dbc.url", () -> toR2dbcUrl(postgres.getJdbcUrl()));
         registry.add("spring.r2dbc.username", postgres::getUsername);
         registry.add("spring.r2dbc.password", postgres::getPassword);
         registry.add("spring.r2dbc.pool.enabled", () -> false);
+    }
+
+    /** jdbc:postgresql://... → r2dbc:postgresql://... (query string отбрасываем — не все параметры JDBC нужны R2DBC). */
+    private static String toR2dbcUrl(String jdbcUrl) {
+        if (!jdbcUrl.startsWith("jdbc:postgresql://")) {
+            throw new IllegalStateException("Expected PostgreSQL JDBC URL, got: " + jdbcUrl);
+        }
+        String tail = jdbcUrl.substring("jdbc:".length());
+        String pathAndHost = tail.split("\\?", 2)[0];
+        return "r2dbc:" + pathAndHost;
     }
 
     @Autowired
