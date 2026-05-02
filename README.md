@@ -24,6 +24,8 @@
 - Docker
 - GitHub Actions (CI)
 
+**Заметка по WebFlux:** в отличие от Spring MVC, здесь `@RequestParam` относится к **query string**; поля HTML-формы (`application/x-www-form-urlencoded`) попадают в контроллер через **`@ModelAttribute`** на небольшие типы в пакете `form` (или через `ServerWebExchange`). Иначе браузер отправляет `id`/`action` в теле POST, а сервер их «не видит».
+
 Денежные суммы и цены: в БД колонки `DECIMAL(19, 2)`, в коде — `BigDecimal` (рубли с копейками).
 
 ## Функциональность
