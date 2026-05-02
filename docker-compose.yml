@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: my-market-postgres
+    environment:
+      POSTGRES_DB: my_market_app
+      POSTGRES_USER: my_market_user
+      POSTGRES_PASSWORD: my_market_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U my_market_user -d my_market_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: my-market-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/my_market_app
+      SPRING_DATASOURCE_USERNAME: my_market_user
+      SPRING_DATASOURCE_PASSWORD: my_market_password
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
