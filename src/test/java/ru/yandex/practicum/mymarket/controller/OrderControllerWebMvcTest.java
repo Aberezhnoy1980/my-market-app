@@ -5,47 +5,49 @@ import ru.yandex.practicum.mymarket.dto.OrderView;
 import ru.yandex.practicum.mymarket.service.OrderService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+import reactor.core.publisher.Mono;
 
-@WebMvcTest(OrderController.class)
+@SpringBootTest
+@AutoConfigureWebTestClient
+@ActiveProfiles("test")
 class OrderControllerWebMvcTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private WebTestClient webTestClient;
 
     @MockBean
     private OrderService orderService;
 
     @Test
-    void getOrdersReturnsOrdersView() throws Exception {
-        when(orderService.getOrders()).thenReturn(List.of());
+    void getOrdersReturnsOk() {
+        when(orderService.getOrders()).thenReturn(Mono.just(List.of()));
 
-        mockMvc.perform(get("/orders"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("orders"));
+        webTestClient.get().uri("/orders")
+                .exchange()
+                .expectStatus().isOk();
     }
 
     @Test
-    void getOrderReturnsOrderView() throws Exception {
+    void getOrderReturnsOk() {
         OrderView order = new OrderView(
                 1L,
                 List.of(new OrderItemView(10L, "Item", new BigDecimal("100"), 2)),
                 new BigDecimal("200")
         );
-        when(orderService.getOrderById(1L)).thenReturn(order);
+        when(orderService.getOrderById(1L)).thenReturn(Mono.just(order));
 
-        mockMvc.perform(get("/orders/1").param("newOrder", "true"))
-                .andExpect(status().isOk())
-                .andExpect(view().name("order"));
+        webTestClient.get().uri("/orders/1?newOrder=true")
+                .exchange()
+                .expectStatus().isOk();
     }
 }

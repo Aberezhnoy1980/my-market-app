@@ -13,10 +13,11 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -46,26 +47,30 @@ class CartServiceTest {
         item.setDescription("D");
         item.setImgPath("i.png");
         item.setPrice(new BigDecimal("100"));
-        when(itemRepository.findById(5L)).thenReturn(Optional.of(item));
-        when(cartItemRepository.findByItemId(5L)).thenReturn(Optional.empty());
-        when(cartItemRepository.save(any(CartItem.class))).thenAnswer(inv -> inv.getArgument(0));
+        item.setId(5L);
+        when(itemRepository.findById(5L)).thenReturn(Mono.just(item));
+        when(cartItemRepository.findByItemId(5L)).thenReturn(Mono.empty());
+        when(cartItemRepository.save(any(CartItem.class))).thenAnswer(inv -> Mono.just(inv.getArgument(0)));
 
-        cartService.changeItemCount(5L, ChangeAction.PLUS);
+        StepVerifier.create(cartService.changeItemCount(5L, ChangeAction.PLUS))
+                .verifyComplete();
 
         ArgumentCaptor<CartItem> captor = ArgumentCaptor.forClass(CartItem.class);
         verify(cartItemRepository).save(captor.capture());
         assertThat(captor.getValue().getCount()).isEqualTo(1);
+        assertThat(captor.getValue().getItemId()).isEqualTo(5L);
     }
 
     @Test
     void minusRemovesWhenCountWouldBecomeZero() {
-        Item item = new Item();
         CartItem cartItem = new CartItem();
-        cartItem.setItem(item);
+        cartItem.setItemId(1L);
         cartItem.setCount(1);
-        when(cartItemRepository.findByItemId(1L)).thenReturn(Optional.of(cartItem));
+        when(cartItemRepository.findByItemId(1L)).thenReturn(Mono.just(cartItem));
+        when(cartItemRepository.delete(cartItem)).thenReturn(Mono.empty());
 
-        cartService.changeItemCount(1L, ChangeAction.MINUS);
+        StepVerifier.create(cartService.changeItemCount(1L, ChangeAction.MINUS))
+                .verifyComplete();
 
         verify(cartItemRepository).delete(cartItem);
         verify(cartItemRepository, never()).save(any());
@@ -73,7 +78,11 @@ class CartServiceTest {
 
     @Test
     void deleteByIdDelegatesToRepository() {
-        cartService.changeItemCount(2L, ChangeAction.DELETE);
+        when(cartItemRepository.deleteByItemId(2L)).thenReturn(Mono.just(1L));
+
+        StepVerifier.create(cartService.changeItemCount(2L, ChangeAction.DELETE))
+                .verifyComplete();
+
         verify(cartItemRepository).deleteByItemId(2L);
     }
 
@@ -81,16 +90,22 @@ class CartServiceTest {
     void getTotalSumMultipliesPriceByCount() {
         Item a = new Item();
         a.setPrice(new BigDecimal("10"));
+        a.setId(1L);
         Item b = new Item();
         b.setPrice(new BigDecimal("5"));
+        b.setId(2L);
         CartItem c1 = new CartItem();
-        c1.setItem(a);
+        c1.setItemId(1L);
         c1.setCount(2);
         CartItem c2 = new CartItem();
-        c2.setItem(b);
+        c2.setItemId(2L);
         c2.setCount(3);
-        when(cartItemRepository.findAll()).thenReturn(List.of(c1, c2));
+        when(cartItemRepository.findAll()).thenReturn(Flux.just(c1, c2));
+        when(itemRepository.findById(1L)).thenReturn(Mono.just(a));
+        when(itemRepository.findById(2L)).thenReturn(Mono.just(b));
 
-        assertThat(cartService.getTotalSum()).isEqualByComparingTo(new BigDecimal("35"));
+        StepVerifier.create(cartService.getTotalSum())
+                .expectNextMatches(total -> total.compareTo(new BigDecimal("35")) == 0)
+                .verifyComplete();
     }
 }
