@@ -3,6 +3,7 @@ package ru.yandex.practicum.mymarket.repository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -12,12 +13,16 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import reactor.test.StepVerifier;
 
 /**
- * Полный контекст приложения против одного PostgreSQL: JDBC (Liquibase) и R2DBC указывают на один инстанс.
- * Свойства берутся из контейнера через {@link DynamicPropertySource} (выше приоритета, чем {@code application-test} с H2).
+ * Полный контекст приложения против одного PostgreSQL: JDBC (Liquibase) и R2DBC на одной БД.
+ * Свойства из контейнера — через {@link DynamicPropertySource}. Явно продублированы URL для Hikari и
+ * Liquibase, чтобы не остаться на дефолтном localhost из {@code application.properties} на CI.
  */
-@SpringBootTest
+@SpringBootTest(
+        webEnvironment = SpringBootTest.WebEnvironment.NONE,
+        properties = "spring.application.name=item-repository-integration-it")
 @ActiveProfiles("test")
 @Testcontainers(disabledWithoutDocker = true)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_CLASS)
 class ItemRepositoryIntegrationTest {
 
     @Container
@@ -26,19 +31,25 @@ class ItemRepositoryIntegrationTest {
     @DynamicPropertySource
     static void registerPostgresProperties(DynamicPropertyRegistry registry) {
         postgres.start();
-        // Один источник правды: R2DBC URL выводим из JDBC URL контейнера, чтобы host/port/database
-        // совпадали с тем, куда Liquibase катает миграции (иначе 42P01 на CI).
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+        // Hikari часто читает jdbc-url напрямую — без этого Liquibase мог уехать на другой инстанс.
+        registry.add("spring.datasource.hikari.jdbc-url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.hikari.username", postgres::getUsername);
+        registry.add("spring.datasource.hikari.password", postgres::getPassword);
+        registry.add("spring.liquibase.enabled", () -> "true");
+        registry.add("spring.liquibase.url", postgres::getJdbcUrl);
+        registry.add("spring.liquibase.user", postgres::getUsername);
+        registry.add("spring.liquibase.password", postgres::getPassword);
         registry.add("spring.r2dbc.url", () -> toR2dbcUrl(postgres.getJdbcUrl()));
         registry.add("spring.r2dbc.username", postgres::getUsername);
         registry.add("spring.r2dbc.password", postgres::getPassword);
         registry.add("spring.r2dbc.pool.enabled", () -> false);
     }
 
-    /** jdbc:postgresql://... → r2dbc:postgresql://... (query string отбрасываем — не все параметры JDBC нужны R2DBC). */
+    /** jdbc:postgresql://... → r2dbc:postgresql://... */
     private static String toR2dbcUrl(String jdbcUrl) {
         if (!jdbcUrl.startsWith("jdbc:postgresql://")) {
             throw new IllegalStateException("Expected PostgreSQL JDBC URL, got: " + jdbcUrl);
