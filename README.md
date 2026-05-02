@@ -3,23 +3,23 @@
 [![CI](https://github.com/Aberezhnoy1980/my-market-app/actions/workflows/ci.yml/badge.svg)](https://github.com/Aberezhnoy1980/my-market-app/actions/workflows/ci.yml)
 ![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?logo=springboot&logoColor=white)
-![Spring MVC](https://img.shields.io/badge/Spring-Web_MVC-6DB33F?logo=spring&logoColor=white)
-![Spring Data JPA](https://img.shields.io/badge/Spring_Data_JPA-Hibernate-59666C?logo=hibernate&logoColor=white)
+![Spring WebFlux](https://img.shields.io/badge/Spring-WebFlux-6DB33F?logo=spring&logoColor=white)
+![Spring Data R2DBC](https://img.shields.io/badge/Spring_Data_R2DBC-Reactive-59666C?logo=postgresql&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Liquibase](https://img.shields.io/badge/Liquibase-migrations-2962FF)
 ![Maven](https://img.shields.io/badge/Maven-build-C71A36?logo=apachemaven&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-containerized-2496ED?logo=docker&logoColor=white)
 
-Учебное web-приложение «Витрина интернет-магазина» на blocking stack (`Spring MVC`).
+Учебное web-приложение «Витрина интернет-магазина» на **реактивном стеке** (`Spring WebFlux`, Netty).
 
 ## Технологический стек
 
 - Java 21
 - Spring Boot
-- Spring Web MVC + Thymeleaf
-- Spring Data JPA + Hibernate
-- PostgreSQL + Liquibase (main/runtime profile)
-- H2 (test profile)
+- Spring WebFlux + Thymeleaf (reactive views)
+- Spring Data R2DBC + `r2dbc-postgresql` / `r2dbc-h2` (tests)
+- JDBC + Liquibase (миграции схемы при старте; БД — PostgreSQL или H2 в тестах)
+- PostgreSQL (main/runtime profile)
 - Maven
 - Docker
 - GitHub Actions (CI)
@@ -83,20 +83,44 @@
 - `SPRING_DATASOURCE_USERNAME`
 - `SPRING_DATASOURCE_PASSWORD`
 
-## Тесты
+## Тесты и профиль `test`
 
-Покрытие:
+Подход: **быстрый основной прогон без Docker** плюс **один «тяжёлый» интеграционный сценарий** там, где нужно проверить связку, которую H2 не воспроизводит один в один с продакшеном.
 
-- Unit tests для service logic.
-- `@WebMvcTest` для MVC contracts.
-- `@DataJpaTest` для repository + Liquibase на H2 (`application-test.properties` в `src/test/resources`).
-- `@SpringBootTest` для smoke/integration scenarios.
+### Слои
 
-Запуск тестов:
+| Что | Как | Зачем |
+|-----|-----|--------|
+| Сервисы | Обычные unit-тесты (`JUnit` + `Mockito`), без Spring-контекста | Чистая логика, быстро и стабильно |
+| Контроллеры | `@SpringBootTest` + `@AutoConfigureWebTestClient` + `WebTestClient`, зависимости сервисов — `@MockBean`, профиль `test` | Контракт HTTP (статусы, редиректы, параметры) без реальной БД |
+| Контекст приложения | `MyMarketAppApplicationTests` — минимальный smoke (`contextLoads`) на H2 | Быстрая проверка, что приложение собирается с профилем `test` |
+| Репозиторий + миграции | `ItemRepositoryIntegrationTest` — см. ниже | Один раз проверяем **те же** Liquibase changelog и **ту же** семантику запросов, что и в проде |
+
+Профиль **`test`** (`src/test/resources/application-test.properties`): встроенная **H2** в режиме, совместимом с PostgreSQL, для **JDBC** (Liquibase) и **R2DBC**. Это сознательный компромисс: большинство тестов не завязаны на Docker и проходят везде (в т.ч. у проверяющего без локального PostgreSQL).
+
+### Почему отдельный интеграционный тест с PostgreSQL
+
+В рантайме схема и начальные данные приходят из **Liquibase по JDBC**, а доступ приложения — через **Spring Data R2DBC**. Это нормальный промышленный паттерн (две «дорожки» к одной БД), но в тестах у любого стека появляется правило: **JDBC и R2DBC должны указывать на один и тот же инстанс БД**, иначе миграции и запросы разъезжаются незаметно.
+
+`ItemRepositoryIntegrationTest` поднимает **PostgreSQL в Docker** (Testcontainers), выставляет URL **явно** через `@DynamicPropertySource` (включая дубли для Hikari и `spring.liquibase.*`), чтобы на CI не оставаться на дефолтном `localhost` из `application.properties`. Без Docker класс помечается как пропущенный (`@Testcontainers(disabledWithoutDocker = true)`): локально сборка остаётся зелёной, на GitHub Actions контейнер доступен — тест выполняется.
+
+Это не «уникальный случай учебного проекта»: типичная связка **Testcontainers + DynamicPropertySource** для Spring Boot. Чуть более многословные свойства — плата за предсказуемость на CI, а не признак «заплатки ради заплатки».
+
+### Запуск
+
+Как в CI (рекомендуется перед PR):
+
+```bash
+./mvnw -B test -Dspring.profiles.active=test
+```
+
+Локально достаточно:
 
 ```bash
 ./mvnw -B test
 ```
+
+Чтобы реально выполнился PostgreSQL-интеграционный тест (а не skip), нужен **работающий Docker**.
 
 ## Docker
 
@@ -122,9 +146,4 @@ docker compose up --build
 
 ## CI
 
-GitHub Actions workflow:
-
-- `mvn -B verify`
-- Liquibase migration check в test context (H2)
-
-Workflow file: `.github/workflows/ci.yml`.
+GitHub Actions (`.github/workflows/ci.yml`): `./mvnw -B test -Dspring.profiles.active=test` на Ubuntu с доступным Docker для runner — профиль `test` поднимает Liquibase на H2 для большинства классов и выполняет интеграционный тест репозитория против PostgreSQL в контейнере.
