@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,7 +50,7 @@ class OrderServiceTest {
     @Test
     void placeOrderCreatesOrderClearsCart() {
         Item item = new Item();
-        item.setPrice(100);
+        item.setPrice(new BigDecimal("100"));
         CartItem line = new CartItem();
         line.setItem(item);
         line.setCount(2);
@@ -57,7 +58,7 @@ class OrderServiceTest {
         when(cartService.getCartSnapshot()).thenReturn(List.of(line));
 
         CustomerOrder persisted = new CustomerOrder();
-        persisted.setTotalSum(200);
+        persisted.setTotalSum(new BigDecimal("200"));
         ReflectionTestUtils.setField(persisted, "id", 7L);
         when(customerOrderRepository.save(any(CustomerOrder.class))).thenReturn(persisted);
 

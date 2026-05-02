@@ -10,6 +10,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "order_items")
 public class OrderItem {
@@ -29,8 +31,8 @@ public class OrderItem {
     @Column(nullable = false)
     private int count;
 
-    @Column(nullable = false)
-    private long price;
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal price;
 
     public Long getId() {
         return id;
@@ -60,11 +62,11 @@ public class OrderItem {
         this.count = count;
     }
 
-    public long getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(long price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 }

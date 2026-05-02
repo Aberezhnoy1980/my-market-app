@@ -7,6 +7,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "items")
 public class Item {
@@ -24,8 +26,9 @@ public class Item {
     @Column(name = "img_path", nullable = false, length = 512)
     private String imgPath;
 
-    @Column(nullable = false)
-    private long price;
+    /** Цена в основной валюте (руб.), масштаб хранения совпадает с колонкой DECIMAL(19,2). */
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal price;
 
     public Long getId() {
         return id;
@@ -55,11 +58,11 @@ public class Item {
         this.imgPath = imgPath;
     }
 
-    public long getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(long price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 }

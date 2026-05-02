@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.Mockito.when;
@@ -38,8 +39,8 @@ class OrderControllerWebMvcTest {
     void getOrderReturnsOrderView() throws Exception {
         OrderView order = new OrderView(
                 1L,
-                List.of(new OrderItemView(10L, "Item", 100, 2)),
-                200L
+                List.of(new OrderItemView(10L, "Item", new BigDecimal("100"), 2)),
+                new BigDecimal("200")
         );
         when(orderService.getOrderById(1L)).thenReturn(order);
 

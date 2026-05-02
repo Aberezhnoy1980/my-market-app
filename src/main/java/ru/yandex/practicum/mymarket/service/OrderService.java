@@ -12,6 +12,7 @@ import ru.yandex.practicum.mymarket.repository.OrderItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -39,9 +40,9 @@ public class OrderService {
             throw new EmptyCartException();
         }
 
-        long total = cartItems.stream()
-                .mapToLong(ci -> ci.getItem().getPrice() * ci.getCount())
-                .sum();
+        BigDecimal total = cartItems.stream()
+                .map(ci -> ci.getItem().getPrice().multiply(BigDecimal.valueOf(ci.getCount())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         CustomerOrder customerOrder = new CustomerOrder();
         customerOrder.setTotalSum(total);

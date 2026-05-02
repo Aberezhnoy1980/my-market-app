@@ -3,3 +3,5 @@ databaseChangeLog:
       file: db/changelog/changes/001-create-core-schema.yaml
   - include:
       file: db/changelog/changes/002-seed-items.yaml
+  - include:
+      file: db/changelog/changes/003-alter-price-columns-to-decimal.yaml

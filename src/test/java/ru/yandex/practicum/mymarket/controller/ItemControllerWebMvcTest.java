@@ -13,6 +13,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -59,7 +60,7 @@ class ItemControllerWebMvcTest {
     @Test
     void getItemByIdReturnsItemView() throws Exception {
         when(itemService.getItemById(1L))
-                .thenReturn(new ItemView(1L, "T", "D", "img.png", 100, 0));
+                .thenReturn(new ItemView(1L, "T", "D", "img.png", new BigDecimal("100"), 0));
 
         mockMvc.perform(get("/items/1"))
                 .andExpect(status().isOk())
@@ -84,7 +85,7 @@ class ItemControllerWebMvcTest {
     @Test
     void postItemByIdReturnsItemView() throws Exception {
         when(itemService.getItemById(2L))
-                .thenReturn(new ItemView(2L, "X", "Y", "z.png", 50, 1));
+                .thenReturn(new ItemView(2L, "X", "Y", "z.png", new BigDecimal("50"), 1));
 
         mockMvc.perform(post("/items/2")
                         .param("action", "MINUS"))

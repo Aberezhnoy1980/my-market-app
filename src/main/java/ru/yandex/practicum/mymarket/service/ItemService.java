@@ -18,6 +18,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -116,7 +117,7 @@ public class ItemService {
     }
 
     private ItemView placeholderItem() {
-        return new ItemView(PLACEHOLDER_ID, "", "", "", 0, 0);
+        return new ItemView(PLACEHOLDER_ID, "", "", "", BigDecimal.ZERO, 0);
     }
 
     private Map<Long, Integer> getCartCounts() {

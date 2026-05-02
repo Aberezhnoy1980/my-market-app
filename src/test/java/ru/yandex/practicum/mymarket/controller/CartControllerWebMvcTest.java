@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.Mockito.verify;
@@ -34,7 +35,7 @@ class CartControllerWebMvcTest {
     @Test
     void getCartReturnsCartView() throws Exception {
         when(cartService.getCartItems()).thenReturn(List.of());
-        when(cartService.getTotalSum()).thenReturn(0L);
+        when(cartService.getTotalSum()).thenReturn(BigDecimal.ZERO);
 
         mockMvc.perform(get("/cart/items"))
                 .andExpect(status().isOk())
@@ -44,7 +45,7 @@ class CartControllerWebMvcTest {
     @Test
     void postCartItemsReturnsCartView() throws Exception {
         when(cartService.getCartItems()).thenReturn(List.of());
-        when(cartService.getTotalSum()).thenReturn(100L);
+        when(cartService.getTotalSum()).thenReturn(new BigDecimal("100"));
 
         mockMvc.perform(post("/cart/items")
                         .param("id", "3")

@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-alter-price-columns-decimal
+      author: assistant
+      changes:
+        - modifyDataType:
+            tableName: items
+            columnName: price
+            newDataType: DECIMAL(19, 2)
+        - modifyDataType:
+            tableName: orders
+            columnName: total_sum
+            newDataType: DECIMAL(19, 2)
+        - modifyDataType:
+            tableName: order_items
+            columnName: price
+            newDataType: DECIMAL(19, 2)

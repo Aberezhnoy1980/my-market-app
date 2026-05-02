@@ -11,6 +11,7 @@ import ru.yandex.practicum.mymarket.repository.ItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,10 +46,10 @@ public class CartService {
                 .toList();
     }
 
-    public long getTotalSum() {
+    public BigDecimal getTotalSum() {
         return cartItemRepository.findAll().stream()
-                .mapToLong(ci -> ci.getItem().getPrice() * ci.getCount())
-                .sum();
+                .map(ci -> ci.getItem().getPrice().multiply(BigDecimal.valueOf(ci.getCount())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     @Transactional

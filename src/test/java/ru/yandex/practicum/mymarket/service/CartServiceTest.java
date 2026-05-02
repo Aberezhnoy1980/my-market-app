@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,7 +45,7 @@ class CartServiceTest {
         item.setTitle("T");
         item.setDescription("D");
         item.setImgPath("i.png");
-        item.setPrice(100);
+        item.setPrice(new BigDecimal("100"));
         when(itemRepository.findById(5L)).thenReturn(Optional.of(item));
         when(cartItemRepository.findByItemId(5L)).thenReturn(Optional.empty());
         when(cartItemRepository.save(any(CartItem.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -79,9 +80,9 @@ class CartServiceTest {
     @Test
     void getTotalSumMultipliesPriceByCount() {
         Item a = new Item();
-        a.setPrice(10);
+        a.setPrice(new BigDecimal("10"));
         Item b = new Item();
-        b.setPrice(5);
+        b.setPrice(new BigDecimal("5"));
         CartItem c1 = new CartItem();
         c1.setItem(a);
         c1.setCount(2);
@@ -90,6 +91,6 @@ class CartServiceTest {
         c2.setCount(3);
         when(cartItemRepository.findAll()).thenReturn(List.of(c1, c2));
 
-        assertThat(cartService.getTotalSum()).isEqualTo(10L * 2 + 5L * 3);
+        assertThat(cartService.getTotalSum()).isEqualByComparingTo(new BigDecimal("35"));
     }
 }

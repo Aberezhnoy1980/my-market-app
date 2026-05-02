@@ -21,6 +21,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,7 +50,7 @@ class ItemServiceTest {
         sampleItem.setTitle("A");
         sampleItem.setDescription("B");
         sampleItem.setImgPath("p.png");
-        sampleItem.setPrice(10);
+        sampleItem.setPrice(new BigDecimal("10"));
         ReflectionTestUtils.setField(sampleItem, "id", 1L);
     }
 
