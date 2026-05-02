@@ -14,7 +14,7 @@ import reactor.test.StepVerifier;
  * JDBC (Liquibase) and R2DBC share one PostgreSQL instance via {@link ServiceConnection}.
  */
 @SpringBootTest
-@ActiveProfiles("test")
+@ActiveProfiles("tc-postgres")
 @Testcontainers(disabledWithoutDocker = true)
 class ItemRepositoryIntegrationTest {
 
