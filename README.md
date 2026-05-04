@@ -56,7 +56,7 @@
 
 Мультипроект Maven: в корне — агрегирующий `pom.xml` (`ru.yandex.practicum:my-market`), модули — в подкаталогах.
 
-- `api/payment-api.yaml` — OpenAPI 3 спецификация интеграции витрины и сервиса платежей.
+- `api/payment-api.yaml` — OpenAPI 3 спецификация интеграции витрины и сервиса платежей (общая для сервера платежей и WebClient-клиента витрины).
 - `my-market-app` — витрина (Spring Boot): `src/main/java`, `src/main/resources`, `src/test/java`.
 - `my-market-app/src/main/resources/templates` — Thymeleaf (`items`, `item`, `cart`, `orders`, `order`).
 - `my-market-payment` — RESTful сервис платежей (WebFlux), серверный код по `payment-api.yaml` (OpenAPI Generator, delegate).
@@ -97,6 +97,7 @@
 - `SPRING_DATASOURCE_URL`
 - `SPRING_DATASOURCE_USERNAME`
 - `SPRING_DATASOURCE_PASSWORD`
+- `PAYMENT_SERVICE_BASE_URL` — базовый URL сервиса платежей для сгенерированного клиента (по умолчанию `http://localhost:8081`).
 
 ## Тесты и профиль `test`
 
