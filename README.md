@@ -115,6 +115,8 @@
 | Контроллеры | `@WebFluxTest(конкретный Controller)` + `WebTestClient`, сервисы — `@MockBean` (узкий web-slice, без полного контекста и БД) | Контракт HTTP (статусы, редиректы, параметры) |
 | Контекст приложения | `MyMarketAppApplicationTests` — smoke (`contextLoads`) на H2 + **Testcontainers Redis** (без Docker тест пропускается) | Сборка с Redis и кешем в профиле `test` |
 | Кеш Redis | `ItemRedisCacheIntegrationTest` — запись/чтение кеша на Redis в Docker | Проверка JSON-кеша товаров |
+| Интеграция с сервисом платежей (витрина) | `PaymentServiceIntegrationTest` — OkHttp `MockWebServer`, сгенерированный `PaymentsApi` / WebClient | HTTP-запросы к JSON API баланса и списания |
+| Сервис платежей (`my-market-payment`) | `AccountBalanceServiceTest` (unit, без Spring), `PaymentsApiIntegrationTest` (`@SpringBootTest` + `WebTestClient`) | Логика баланса и оба реактивных эндпоинта |
 | Репозиторий + миграции | `ItemRepositoryIntegrationTest` — PostgreSQL + Redis, см. ниже | Liquibase + R2DBC + Redis как на CI |
 
 Профиль **`test`** (`my-market-app/src/test/resources/application-test.properties`): встроенная **H2** в режиме, совместимом с PostgreSQL, для **JDBC** (Liquibase) и **R2DBC**. Это сознательный компромисс: большинство тестов не завязаны на Docker и проходят везде (в т.ч. у проверяющего без локального PostgreSQL).
@@ -173,4 +175,4 @@ docker build -f Dockerfile.payment -t my-market-payment:local .
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`): `./mvnw -B test -Dspring.profiles.active=test` на Ubuntu с доступным Docker для runner — профиль `test` поднимает Liquibase на H2 для большинства классов и выполняет интеграционный тест репозитория против PostgreSQL в контейнере.
+GitHub Actions (`.github/workflows/ci.yml`): из **корня** репозитория выполняется `./mvnw -B test -Dspring.profiles.active=test` (оба модуля: `my-market-app` и `my-market-payment`) на Ubuntu с Docker. Профиль `test` поднимает Liquibase на H2 для большинства классов витрины и выполняет интеграционный тест репозитория против PostgreSQL в контейнере.
