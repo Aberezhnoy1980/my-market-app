@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - module_two_sprint_five_branch
+      - 'module_two_sprint_*'
   pull_request:
 
 jobs:

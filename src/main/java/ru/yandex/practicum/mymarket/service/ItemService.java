@@ -3,27 +3,24 @@ package ru.yandex.practicum.mymarket.service;
 import ru.yandex.practicum.mymarket.dto.ItemView;
 import ru.yandex.practicum.mymarket.dto.ItemsPageView;
 import ru.yandex.practicum.mymarket.dto.PagingView;
+import ru.yandex.practicum.mymarket.exception.ItemNotFoundException;
 import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
-import ru.yandex.practicum.mymarket.exception.ItemNotFoundException;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
+import ru.yandex.practicum.mymarket.repository.ItemQueryRepository;
 import ru.yandex.practicum.mymarket.repository.ItemRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import reactor.core.publisher.Mono;
 
 @Service
 @Transactional(readOnly = true)
@@ -35,73 +32,63 @@ public class ItemService {
     private final ItemRepository itemRepository;
     private final CartItemRepository cartItemRepository;
     private final ItemViewMapper itemViewMapper;
+    private final ItemQueryRepository itemQueryRepository;
 
     public ItemService(
             ItemRepository itemRepository,
             CartItemRepository cartItemRepository,
-            ItemViewMapper itemViewMapper
+            ItemViewMapper itemViewMapper,
+            ItemQueryRepository itemQueryRepository
     ) {
         this.itemRepository = itemRepository;
         this.cartItemRepository = cartItemRepository;
         this.itemViewMapper = itemViewMapper;
+        this.itemQueryRepository = itemQueryRepository;
     }
 
-    public ItemsPageView getItemsPage(String search, SortType sortType, int pageNumber, int pageSize) {
+    public Mono<ItemsPageView> getItemsPage(String search, SortType sortType, int pageNumber, int pageSize) {
         int normalizedPage = Math.max(pageNumber, 1);
         int normalizedPageSize = Math.max(pageSize, 1);
-        Pageable pageable = PageRequest.of(
-                normalizedPage - 1,
-                normalizedPageSize,
-                resolveSort(sortType)
-        );
+        int offset = (normalizedPage - 1) * normalizedPageSize;
 
-        Specification<Item> spec = buildSearchSpecification(search);
-        Page<Item> page = itemRepository.findAll(spec, pageable);
-        Map<Long, Integer> counts = getCartCounts();
+        Mono<Map<Long, Integer>> countsMono = cartItemRepository.findAll()
+                .collectList()
+                .map(list -> list.stream().collect(Collectors.toMap(CartItem::getItemId, CartItem::getCount, (a, b) -> b)));
 
-        List<ItemView> itemViews = page.getContent().stream()
-                .map(item -> itemViewMapper.toView(item, counts.getOrDefault(item.getId(), 0)))
-                .toList();
+        Mono<Long> totalMono = itemQueryRepository.countBySearch(search);
 
-        return new ItemsPageView(
-                toRowsWithPlaceholders(itemViews),
-                new PagingView(
-                        normalizedPageSize,
-                        normalizedPage,
-                        page.hasPrevious(),
-                        page.hasNext()
-                )
-        );
+        Mono<List<Item>> itemsMono = itemQueryRepository
+                .findItems(search, sortType, offset, normalizedPageSize)
+                .collectList();
+
+        return Mono.zip(countsMono.defaultIfEmpty(Map.of()), totalMono, itemsMono)
+                .map(tuple -> {
+                    Map<Long, Integer> counts = tuple.getT1();
+                    long total = tuple.getT2();
+                    List<Item> items = tuple.getT3();
+
+                    List<ItemView> itemViews = items.stream()
+                            .map(item -> itemViewMapper.toView(item, counts.getOrDefault(item.getId(), 0)))
+                            .toList();
+
+                    boolean hasPrevious = normalizedPage > 1;
+                    boolean hasNext = (long) offset + items.size() < total;
+
+                    return new ItemsPageView(
+                            toRowsWithPlaceholders(itemViews),
+                            new PagingView(normalizedPageSize, normalizedPage, hasPrevious, hasNext)
+                    );
+                });
     }
 
-    public ItemView getItemById(long id) {
-        Item item = itemRepository.findById(id)
-                .orElseThrow(() -> new ItemNotFoundException(id));
-        int count = cartItemRepository.findByItemId(id)
+    public Mono<ItemView> getItemById(long id) {
+        Mono<Item> itemMono = itemRepository.findById(id)
+                .switchIfEmpty(Mono.error(new ItemNotFoundException(id)));
+        Mono<Integer> countMono = cartItemRepository.findByItemId(id)
                 .map(CartItem::getCount)
-                .orElse(0);
-        return itemViewMapper.toView(item, count);
-    }
-
-    private Specification<Item> buildSearchSpecification(String search) {
-        String normalized = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
-        if (normalized.isBlank()) {
-            return Specification.where(null);
-        }
-        return (root, query, cb) -> cb.or(
-                cb.like(cb.lower(root.get("title")), "%" + normalized + "%"),
-                cb.like(cb.lower(root.get("description")), "%" + normalized + "%")
-        );
-    }
-
-    private Sort resolveSort(SortType sortType) {
-        if (sortType == null || sortType == SortType.NO) {
-            return Sort.unsorted();
-        }
-        if (sortType == SortType.ALPHA) {
-            return Sort.by(Sort.Order.asc("title"), Sort.Order.asc("id"));
-        }
-        return Sort.by(Sort.Order.asc("price"), Sort.Order.asc("id"));
+                .defaultIfEmpty(0);
+        return Mono.zip(itemMono, countMono)
+                .map(t -> itemViewMapper.toView(t.getT1(), t.getT2()));
     }
 
     private List<List<ItemView>> toRowsWithPlaceholders(List<ItemView> items) {
@@ -119,10 +106,4 @@ public class ItemService {
     private ItemView placeholderItem() {
         return new ItemView(PLACEHOLDER_ID, "", "", "", BigDecimal.ZERO, 0);
     }
-
-    private Map<Long, Integer> getCartCounts() {
-        return cartItemRepository.findAll().stream()
-                .collect(Collectors.toMap(ci -> ci.getItem().getId(), CartItem::getCount));
-    }
-
 }
