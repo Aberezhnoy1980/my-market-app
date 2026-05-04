@@ -1,6 +1,7 @@
 package ru.yandex.practicum.mymarket.service;
 
 import ru.yandex.practicum.mymarket.dto.CartPageData;
+import ru.yandex.practicum.mymarket.dto.CheckoutUiState;
 import ru.yandex.practicum.mymarket.dto.ItemView;
 import ru.yandex.practicum.mymarket.exception.ItemNotFoundException;
 import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
@@ -23,15 +24,18 @@ public class CartService {
     private final CartItemRepository cartItemRepository;
     private final ItemRepository itemRepository;
     private final ItemViewMapper itemViewMapper;
+    private final PaymentService paymentService;
 
     public CartService(
             CartItemRepository cartItemRepository,
             ItemRepository itemRepository,
-            ItemViewMapper itemViewMapper
+            ItemViewMapper itemViewMapper,
+            PaymentService paymentService
     ) {
         this.cartItemRepository = cartItemRepository;
         this.itemRepository = itemRepository;
         this.itemViewMapper = itemViewMapper;
+        this.paymentService = paymentService;
     }
 
     /**
@@ -44,13 +48,19 @@ public class CartService {
                                 itemViewMapper.toView(item, ci.getCount()),
                                 item.getPrice().multiply(BigDecimal.valueOf(ci.getCount())))))
                 .collectList()
-                .map(lines -> {
+                .flatMap(lines -> {
                     List<ItemView> items = lines.stream().map(CartLine::view).toList();
                     BigDecimal total = lines.stream()
                             .map(CartLine::lineTotal)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    return new CartPageData(items, total);
+                    boolean hasItems = !items.isEmpty();
+                    return paymentService.describeCheckout(total, hasItems)
+                            .map(ui -> toCartPage(items, total, ui));
                 });
+    }
+
+    private CartPageData toCartPage(List<ItemView> items, BigDecimal total, CheckoutUiState ui) {
+        return new CartPageData(items, total, ui.balanceText(), ui.checkoutEnabled(), ui.paymentHint());
     }
 
     private record CartLine(ItemView view, BigDecimal lineTotal) {}

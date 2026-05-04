@@ -1,5 +1,6 @@
 package ru.yandex.practicum.mymarket.service;
 
+import ru.yandex.practicum.mymarket.dto.CheckoutUiState;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.ChangeAction;
 import ru.yandex.practicum.mymarket.model.Item;
@@ -21,6 +22,8 @@ import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +39,9 @@ class CartServiceTest {
 
     @Spy
     private ItemViewMapper itemViewMapper = new ItemViewMapper();
+
+    @Mock
+    private PaymentService paymentService;
 
     @InjectMocks
     private CartService cartService;
@@ -103,10 +109,13 @@ class CartServiceTest {
         when(cartItemRepository.findAll()).thenReturn(Flux.just(c1, c2));
         when(itemRepository.findById(1L)).thenReturn(Mono.just(a));
         when(itemRepository.findById(2L)).thenReturn(Mono.just(b));
+        when(paymentService.describeCheckout(any(BigDecimal.class), anyBoolean()))
+                .thenReturn(Mono.just(new CheckoutUiState("999 руб.", true, null)));
 
         StepVerifier.create(cartService.getCartPageData())
                 .expectNextMatches(data -> data.total().compareTo(new BigDecimal("35")) == 0
-                        && data.items().size() == 2)
+                        && data.items().size() == 2
+                        && data.checkoutEnabled())
                 .verifyComplete();
     }
 }

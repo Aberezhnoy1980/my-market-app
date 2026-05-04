@@ -46,10 +46,22 @@
         </div>
         <div class="row p-2">
             <div class="col">
+                <p class="mb-1">
+                    <span class="text-muted">Баланс (платежи):</span>
+                    <span th:if="${balanceText != null}" th:text="${balanceText}">0 руб.</span>
+                    <span th:if="${balanceText == null}" class="text-danger">недоступен</span>
+                </p>
+                <p class="text-danger small mb-2" th:if="${paymentHint != null}" th:text="${paymentHint}"></p>
+                <p class="text-danger small mb-2" th:if="${buyError != null}" th:text="${buyError}"></p>
+            </div>
+        </div>
+        <div class="row p-2">
+            <div class="col">
                 <form action="/buy" method="post" th:if="${!items.isEmpty()}">
                     <div class="hstack gap-3">
                         <h2 th:text="'Итого: '+${total}+' руб.'"/>
-                        <button class="btn btn-warning ms-auto">Купить</button>
+                        <button type="submit" class="btn btn-warning ms-auto"
+                                th:disabled="${!checkoutEnabled}">Купить</button>
                     </div>
                 </form>
             </div>

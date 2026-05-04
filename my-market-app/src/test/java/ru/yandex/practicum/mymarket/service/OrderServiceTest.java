@@ -22,6 +22,7 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,6 +40,9 @@ class OrderServiceTest {
 
     @Mock
     private ItemRepository itemRepository;
+
+    @Mock
+    private PaymentService paymentService;
 
     @InjectMocks
     private OrderService orderService;
@@ -70,11 +74,13 @@ class OrderServiceTest {
         when(customerOrderRepository.save(any(CustomerOrder.class))).thenReturn(Mono.just(persisted));
         when(orderItemRepository.saveAll(anyList())).thenReturn(Flux.empty());
         when(cartService.clear()).thenReturn(Mono.empty());
+        when(paymentService.chargeOrderAmount(any(BigDecimal.class))).thenReturn(Mono.empty());
 
         StepVerifier.create(orderService.placeOrder())
                 .expectNext(7L)
                 .verifyComplete();
 
+        verify(paymentService).chargeOrderAmount(argThat(a -> a.compareTo(new BigDecimal("200")) == 0));
         verify(orderItemRepository).saveAll(anyList());
         verify(cartService).clear();
     }

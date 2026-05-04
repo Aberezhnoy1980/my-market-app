@@ -32,7 +32,7 @@ class CartControllerWebFluxTest {
     @Test
     void getCartReturnsOk() {
         when(cartService.getCartPageData())
-                .thenReturn(Mono.just(new CartPageData(List.of(), BigDecimal.ZERO)));
+                .thenReturn(Mono.just(new CartPageData(List.of(), BigDecimal.ZERO, "0 руб.", false, null)));
 
         webTestClient.get().uri("/cart/items")
                 .exchange()
@@ -43,7 +43,7 @@ class CartControllerWebFluxTest {
     void postCartItemsReturnsOk() {
         when(cartService.changeItemCount(3L, ChangeAction.DELETE)).thenReturn(Mono.empty());
         when(cartService.getCartPageData())
-                .thenReturn(Mono.just(new CartPageData(List.of(), new BigDecimal("100"))));
+                .thenReturn(Mono.just(new CartPageData(List.of(), new BigDecimal("100"), "500 руб.", true, null)));
 
         webTestClient.post().uri("/cart/items?id=3&action=DELETE")
                 .exchange()

@@ -158,7 +158,7 @@ docker run --rm -p 8080:8080 my-market-app:local
 docker compose up --build
 ```
 
-После старта: витрина — `http://localhost:8080`, сервис платежей — `http://localhost:8081`.
+После старта: витрина — `http://localhost:8080`, сервис платежей — `http://localhost:8081`. Сервис `app` в compose получает `PAYMENT_SERVICE_BASE_URL=http://payment:8081`, чтобы витрина ходила в контейнер платежей.
 
 Образ сервиса платежей отдельно:
 

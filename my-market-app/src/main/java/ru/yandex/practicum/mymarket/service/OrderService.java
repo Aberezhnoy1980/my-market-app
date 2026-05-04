@@ -29,17 +29,20 @@ public class OrderService {
     private final CustomerOrderRepository customerOrderRepository;
     private final OrderItemRepository orderItemRepository;
     private final ItemRepository itemRepository;
+    private final PaymentService paymentService;
 
     public OrderService(
             CartService cartService,
             CustomerOrderRepository customerOrderRepository,
             OrderItemRepository orderItemRepository,
-            ItemRepository itemRepository
+            ItemRepository itemRepository,
+            PaymentService paymentService
     ) {
         this.cartService = cartService;
         this.customerOrderRepository = customerOrderRepository;
         this.orderItemRepository = orderItemRepository;
         this.itemRepository = itemRepository;
+        this.paymentService = paymentService;
     }
 
     @Transactional
@@ -50,20 +53,20 @@ public class OrderService {
                         return Mono.error(new EmptyCartException());
                     }
                     return computeTotal(cartItems)
-                            .flatMap(total -> {
-                                CustomerOrder order = new CustomerOrder();
-                                order.setTotalSum(total);
-                                return customerOrderRepository.save(order);
-                            })
-                            .flatMap(saved ->
-                                    buildOrderLines(saved.getId(), cartItems)
-                                            .collectList()
-                                            .flatMap(lines ->
-                                                    orderItemRepository.saveAll(lines)
-                                                            .then(cartService.clear())
-                                                            .thenReturn(saved.getId()))
-                            );
+                            .flatMap(total -> paymentService.chargeOrderAmount(total)
+                                    .then(persistOrderAfterPayment(cartItems, total)));
                 });
+    }
+
+    private Mono<Long> persistOrderAfterPayment(List<CartItem> cartItems, BigDecimal total) {
+        CustomerOrder order = new CustomerOrder();
+        order.setTotalSum(total);
+        return customerOrderRepository.save(order)
+                .flatMap(saved -> buildOrderLines(saved.getId(), cartItems)
+                        .collectList()
+                        .flatMap(lines -> orderItemRepository.saveAll(lines)
+                                .then(cartService.clear())
+                                .thenReturn(saved.getId())));
     }
 
     private Mono<BigDecimal> computeTotal(List<CartItem> cartItems) {
