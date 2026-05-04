@@ -6,7 +6,6 @@ import ru.yandex.practicum.mymarket.model.ChangeAction;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
-import ru.yandex.practicum.mymarket.repository.ItemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -35,7 +34,7 @@ class CartServiceTest {
     private CartItemRepository cartItemRepository;
 
     @Mock
-    private ItemRepository itemRepository;
+    private ItemCatalogService itemCatalogService;
 
     @Spy
     private ItemViewMapper itemViewMapper = new ItemViewMapper();
@@ -54,7 +53,7 @@ class CartServiceTest {
         item.setImgPath("i.png");
         item.setPrice(new BigDecimal("100"));
         item.setId(5L);
-        when(itemRepository.findById(5L)).thenReturn(Mono.just(item));
+        when(itemCatalogService.getItem(5L)).thenReturn(Mono.just(item));
         when(cartItemRepository.findByItemId(5L)).thenReturn(Mono.empty());
         when(cartItemRepository.save(any(CartItem.class))).thenAnswer(inv -> Mono.just(inv.getArgument(0)));
 
@@ -107,8 +106,8 @@ class CartServiceTest {
         c2.setItemId(2L);
         c2.setCount(3);
         when(cartItemRepository.findAll()).thenReturn(Flux.just(c1, c2));
-        when(itemRepository.findById(1L)).thenReturn(Mono.just(a));
-        when(itemRepository.findById(2L)).thenReturn(Mono.just(b));
+        when(itemCatalogService.getItem(1L)).thenReturn(Mono.just(a));
+        when(itemCatalogService.getItem(2L)).thenReturn(Mono.just(b));
         when(paymentService.describeCheckout(any(BigDecimal.class), anyBoolean()))
                 .thenReturn(Mono.just(new CheckoutUiState("999 руб.", true, null)));
 

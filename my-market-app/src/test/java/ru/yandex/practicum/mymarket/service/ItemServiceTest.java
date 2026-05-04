@@ -1,14 +1,12 @@
 package ru.yandex.practicum.mymarket.service;
 
 import ru.yandex.practicum.mymarket.dto.ItemView;
-import ru.yandex.practicum.mymarket.dto.ItemsPageView;
 import ru.yandex.practicum.mymarket.dto.PagingView;
 import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.ItemQueryRepository;
-import ru.yandex.practicum.mymarket.repository.ItemRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,7 +14,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
@@ -33,14 +30,13 @@ import static org.mockito.Mockito.when;
 class ItemServiceTest {
 
     @Mock
-    @SuppressWarnings("unused")
-    private ItemRepository itemRepository;
-
-    @Mock
     private CartItemRepository cartItemRepository;
 
     @Mock
     private ItemQueryRepository itemQueryRepository;
+
+    @Mock
+    private ItemCatalogService itemCatalogService;
 
     @Spy
     private ItemViewMapper itemViewMapper = new ItemViewMapper();
@@ -64,8 +60,9 @@ class ItemServiceTest {
     void getItemsPagePadsRowToThreeColumns() {
         when(cartItemRepository.findAll()).thenReturn(Flux.empty());
         when(itemQueryRepository.countBySearch(anyString())).thenReturn(Mono.just(1L));
-        when(itemQueryRepository.findItems(anyString(), any(SortType.class), anyInt(), anyInt()))
-                .thenReturn(Flux.just(sampleItem));
+        when(itemQueryRepository.findItemIds(anyString(), any(SortType.class), anyInt(), anyInt()))
+                .thenReturn(Flux.just(1L));
+        when(itemCatalogService.getItem(1L)).thenReturn(Mono.just(sampleItem));
 
         StepVerifier.create(itemService.getItemsPage("", SortType.NO, 1, 10))
                 .assertNext(page -> {

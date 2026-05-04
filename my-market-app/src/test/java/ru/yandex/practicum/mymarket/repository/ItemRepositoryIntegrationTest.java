@@ -7,9 +7,11 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 import reactor.test.StepVerifier;
 
 /**
@@ -27,6 +29,10 @@ class ItemRepositoryIntegrationTest {
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    @Container
+    static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
+            .withExposedPorts(6379);
 
     @DynamicPropertySource
     static void registerPostgresProperties(DynamicPropertyRegistry registry) {
@@ -46,6 +52,8 @@ class ItemRepositoryIntegrationTest {
         registry.add("spring.r2dbc.username", postgres::getUsername);
         registry.add("spring.r2dbc.password", postgres::getPassword);
         registry.add("spring.r2dbc.pool.enabled", () -> false);
+        registry.add("spring.data.redis.host", redis::getHost);
+        registry.add("spring.data.redis.port", () -> String.valueOf(redis.getMappedPort(6379)));
     }
 
     /** jdbc:postgresql://... → r2dbc:postgresql://... */

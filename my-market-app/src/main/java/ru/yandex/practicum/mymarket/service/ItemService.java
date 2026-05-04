@@ -10,7 +10,6 @@ import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.ItemQueryRepository;
-import ru.yandex.practicum.mymarket.repository.ItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,21 +28,21 @@ public class ItemService {
     private static final int CARD_COLUMNS = 3;
     private static final int PLACEHOLDER_ID = -1;
 
-    private final ItemRepository itemRepository;
     private final CartItemRepository cartItemRepository;
     private final ItemViewMapper itemViewMapper;
     private final ItemQueryRepository itemQueryRepository;
+    private final ItemCatalogService itemCatalogService;
 
     public ItemService(
-            ItemRepository itemRepository,
             CartItemRepository cartItemRepository,
             ItemViewMapper itemViewMapper,
-            ItemQueryRepository itemQueryRepository
+            ItemQueryRepository itemQueryRepository,
+            ItemCatalogService itemCatalogService
     ) {
-        this.itemRepository = itemRepository;
         this.cartItemRepository = cartItemRepository;
         this.itemViewMapper = itemViewMapper;
         this.itemQueryRepository = itemQueryRepository;
+        this.itemCatalogService = itemCatalogService;
     }
 
     public Mono<ItemsPageView> getItemsPage(String search, SortType sortType, int pageNumber, int pageSize) {
@@ -58,7 +57,8 @@ public class ItemService {
         Mono<Long> totalMono = itemQueryRepository.countBySearch(search);
 
         Mono<List<Item>> itemsMono = itemQueryRepository
-                .findItems(search, sortType, offset, normalizedPageSize)
+                .findItemIds(search, sortType, offset, normalizedPageSize)
+                .concatMap(itemCatalogService::getItem)
                 .collectList();
 
         return Mono.zip(countsMono.defaultIfEmpty(Map.of()), totalMono, itemsMono)
@@ -82,7 +82,7 @@ public class ItemService {
     }
 
     public Mono<ItemView> getItemById(long id) {
-        Mono<Item> itemMono = itemRepository.findById(id)
+        Mono<Item> itemMono = itemCatalogService.getItem(id)
                 .switchIfEmpty(Mono.error(new ItemNotFoundException(id)));
         Mono<Integer> countMono = cartItemRepository.findByItemId(id)
                 .map(CartItem::getCount)

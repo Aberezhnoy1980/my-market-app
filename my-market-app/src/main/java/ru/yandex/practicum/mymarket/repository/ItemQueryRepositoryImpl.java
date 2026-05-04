@@ -41,6 +41,30 @@ public class ItemQueryRepositoryImpl implements ItemQueryRepository {
     }
 
     @Override
+    public Flux<Long> findItemIds(String search, SortType sortType, int offset, int limit) {
+        String orderBy = orderByClause(sortType);
+        String normalized = normalize(search);
+        if (normalized.isEmpty()) {
+            return databaseClient.sql("SELECT id FROM items ORDER BY " + orderBy + " LIMIT :limit OFFSET :offset")
+                    .bind("limit", limit)
+                    .bind("offset", offset)
+                    .map((row, meta) -> row.get("id", Long.class))
+                    .all();
+        }
+        String pattern = "%" + normalized + "%";
+        return databaseClient.sql("""
+                        SELECT id FROM items
+                        WHERE LOWER(title) LIKE LOWER(:pattern)
+                           OR LOWER(description) LIKE LOWER(:pattern)
+                        ORDER BY """ + orderBy + " LIMIT :limit OFFSET :offset")
+                .bind("pattern", pattern)
+                .bind("limit", limit)
+                .bind("offset", offset)
+                .map((row, meta) -> row.get("id", Long.class))
+                .all();
+    }
+
+    @Override
     public Flux<Item> findItems(String search, SortType sortType, int offset, int limit) {
         String orderBy = orderByClause(sortType);
         String normalized = normalize(search);

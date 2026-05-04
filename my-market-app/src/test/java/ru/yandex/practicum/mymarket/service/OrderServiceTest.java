@@ -5,7 +5,6 @@ import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.CustomerOrder;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.repository.CustomerOrderRepository;
-import ru.yandex.practicum.mymarket.repository.ItemRepository;
 import ru.yandex.practicum.mymarket.repository.OrderItemRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,7 +18,6 @@ import reactor.test.StepVerifier;
 import java.math.BigDecimal;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -39,10 +37,10 @@ class OrderServiceTest {
     private OrderItemRepository orderItemRepository;
 
     @Mock
-    private ItemRepository itemRepository;
+    private PaymentService paymentService;
 
     @Mock
-    private PaymentService paymentService;
+    private ItemCatalogService itemCatalogService;
 
     @InjectMocks
     private OrderService orderService;
@@ -66,7 +64,7 @@ class OrderServiceTest {
         line.setCount(2);
 
         when(cartService.getCartSnapshot()).thenReturn(Mono.just(List.of(line)));
-        when(itemRepository.findById(3L)).thenReturn(Mono.just(item));
+        when(itemCatalogService.getItem(3L)).thenReturn(Mono.just(item));
 
         CustomerOrder persisted = new CustomerOrder();
         persisted.setTotalSum(new BigDecimal("200"));

@@ -8,7 +8,6 @@ import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.ChangeAction;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
-import ru.yandex.practicum.mymarket.repository.ItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,18 +21,18 @@ import reactor.core.publisher.Mono;
 public class CartService {
 
     private final CartItemRepository cartItemRepository;
-    private final ItemRepository itemRepository;
+    private final ItemCatalogService itemCatalogService;
     private final ItemViewMapper itemViewMapper;
     private final PaymentService paymentService;
 
     public CartService(
             CartItemRepository cartItemRepository,
-            ItemRepository itemRepository,
+            ItemCatalogService itemCatalogService,
             ItemViewMapper itemViewMapper,
             PaymentService paymentService
     ) {
         this.cartItemRepository = cartItemRepository;
-        this.itemRepository = itemRepository;
+        this.itemCatalogService = itemCatalogService;
         this.itemViewMapper = itemViewMapper;
         this.paymentService = paymentService;
     }
@@ -43,7 +42,7 @@ public class CartService {
      */
     public Mono<CartPageData> getCartPageData() {
         return cartItemRepository.findAll()
-                .concatMap(ci -> itemRepository.findById(ci.getItemId())
+                .concatMap(ci -> itemCatalogService.getItem(ci.getItemId())
                         .map(item -> new CartLine(
                                 itemViewMapper.toView(item, ci.getCount()),
                                 item.getPrice().multiply(BigDecimal.valueOf(ci.getCount())))))
@@ -90,7 +89,7 @@ public class CartService {
     }
 
     private Mono<CartItem> createLineWithCountOne(long itemId) {
-        return itemRepository.findById(itemId)
+        return itemCatalogService.getItem(itemId)
                 .switchIfEmpty(Mono.error(new ItemNotFoundException(itemId)))
                 .flatMap(item -> {
                     CartItem cartItem = new CartItem();

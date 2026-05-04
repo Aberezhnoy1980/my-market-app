@@ -11,4 +11,7 @@ public interface ItemQueryRepository {
     Mono<Long> countBySearch(String search);
 
     Flux<Item> findItems(String search, SortType sortType, int offset, int limit);
+
+    /** Только id в том же порядке, что и у {@link #findItems} — для догрузки полных карточек из кеша. */
+    Flux<Long> findItemIds(String search, SortType sortType, int offset, int limit);
 }

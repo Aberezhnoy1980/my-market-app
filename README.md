@@ -9,6 +9,7 @@
 ![Liquibase](https://img.shields.io/badge/Liquibase-migrations-2962FF)
 ![Maven](https://img.shields.io/badge/Maven-build-C71A36?logo=apachemaven&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-containerized-2496ED?logo=docker&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-cache-DC382D?logo=redis&logoColor=white)
 
 Учебное web-приложение «Витрина интернет-магазина» на **реактивном стеке** (`Spring WebFlux`, Netty).
 
@@ -20,6 +21,7 @@
 - Spring Data R2DBC + `r2dbc-postgresql` / `r2dbc-h2` (tests)
 - JDBC + Liquibase (миграции схемы при старте; БД — PostgreSQL или H2 в тестах)
 - PostgreSQL (main/runtime profile)
+- Spring Data Redis Reactive + Lettuce (кеш карточек товаров, JSON по ключу `mymarket:item:{id}`)
 - Maven
 - Docker
 - GitHub Actions (CI)
@@ -98,6 +100,8 @@
 - `SPRING_DATASOURCE_USERNAME`
 - `SPRING_DATASOURCE_PASSWORD`
 - `PAYMENT_SERVICE_BASE_URL` — базовый URL сервиса платежей для сгенерированного клиента (по умолчанию `http://localhost:8081`).
+- `SPRING_DATA_REDIS_HOST`, `SPRING_DATA_REDIS_PORT` — Redis для кеша товаров (в Docker Compose задано `redis` / `6379`).
+- `ITEMS_CACHE_TTL` — время жизни записей в кеше (по умолчанию `PT3M`).
 
 ## Тесты и профиль `test`
 
@@ -109,8 +113,9 @@
 |-----|-----|--------|
 | Сервисы | Обычные unit-тесты (`JUnit` + `Mockito`), без Spring-контекста | Чистая логика, быстро и стабильно |
 | Контроллеры | `@WebFluxTest(конкретный Controller)` + `WebTestClient`, сервисы — `@MockBean` (узкий web-slice, без полного контекста и БД) | Контракт HTTP (статусы, редиректы, параметры) |
-| Контекст приложения | `MyMarketAppApplicationTests` — минимальный smoke (`contextLoads`) на H2 | Быстрая проверка, что приложение собирается с профилем `test` |
-| Репозиторий + миграции | `ItemRepositoryIntegrationTest` — см. ниже | Один раз проверяем **те же** Liquibase changelog и **ту же** семантику запросов, что и в проде |
+| Контекст приложения | `MyMarketAppApplicationTests` — smoke (`contextLoads`) на H2 + **Testcontainers Redis** (без Docker тест пропускается) | Сборка с Redis и кешем в профиле `test` |
+| Кеш Redis | `ItemRedisCacheIntegrationTest` — запись/чтение кеша на Redis в Docker | Проверка JSON-кеша товаров |
+| Репозиторий + миграции | `ItemRepositoryIntegrationTest` — PostgreSQL + Redis, см. ниже | Liquibase + R2DBC + Redis как на CI |
 
 Профиль **`test`** (`my-market-app/src/test/resources/application-test.properties`): встроенная **H2** в режиме, совместимом с PostgreSQL, для **JDBC** (Liquibase) и **R2DBC**. Это сознательный компромисс: большинство тестов не завязаны на Docker и проходят везде (в т.ч. у проверяющего без локального PostgreSQL).
 

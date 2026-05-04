@@ -9,7 +9,6 @@ import ru.yandex.practicum.mymarket.model.CustomerOrder;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.OrderItem;
 import ru.yandex.practicum.mymarket.repository.CustomerOrderRepository;
-import ru.yandex.practicum.mymarket.repository.ItemRepository;
 import ru.yandex.practicum.mymarket.repository.OrderItemRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,20 +27,20 @@ public class OrderService {
     private final CartService cartService;
     private final CustomerOrderRepository customerOrderRepository;
     private final OrderItemRepository orderItemRepository;
-    private final ItemRepository itemRepository;
+    private final ItemCatalogService itemCatalogService;
     private final PaymentService paymentService;
 
     public OrderService(
             CartService cartService,
             CustomerOrderRepository customerOrderRepository,
             OrderItemRepository orderItemRepository,
-            ItemRepository itemRepository,
+            ItemCatalogService itemCatalogService,
             PaymentService paymentService
     ) {
         this.cartService = cartService;
         this.customerOrderRepository = customerOrderRepository;
         this.orderItemRepository = orderItemRepository;
-        this.itemRepository = itemRepository;
+        this.itemCatalogService = itemCatalogService;
         this.paymentService = paymentService;
     }
 
@@ -71,14 +70,14 @@ public class OrderService {
 
     private Mono<BigDecimal> computeTotal(List<CartItem> cartItems) {
         return Flux.fromIterable(cartItems)
-                .concatMap(ci -> itemRepository.findById(ci.getItemId())
+                .concatMap(ci -> itemCatalogService.getItem(ci.getItemId())
                         .map(item -> item.getPrice().multiply(BigDecimal.valueOf(ci.getCount()))))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private Flux<OrderItem> buildOrderLines(long orderId, List<CartItem> cartItems) {
         return Flux.fromIterable(cartItems)
-                .concatMap(ci -> itemRepository.findById(ci.getItemId())
+                .concatMap(ci -> itemCatalogService.getItem(ci.getItemId())
                         .map(item -> {
                             OrderItem line = new OrderItem();
                             line.setOrderId(orderId);
@@ -109,7 +108,8 @@ public class OrderService {
                         return Mono.just(new OrderView(order.getId(), List.of(), order.getTotalSum()));
                     }
                     List<Long> itemIds = orderItems.stream().map(OrderItem::getItemId).distinct().toList();
-                    return itemRepository.findAllById(itemIds)
+                    return Flux.fromIterable(itemIds)
+                            .concatMap(itemCatalogService::getItem)
                             .collectMap(Item::getId)
                             .map(itemsById -> mapOrderView(order, orderItems, itemsById));
                 });
