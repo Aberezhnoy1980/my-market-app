@@ -1,5 +1,6 @@
 package ru.yandex.practicum.mymarket.service;
 
+import ru.yandex.practicum.mymarket.dto.CartPageData;
 import ru.yandex.practicum.mymarket.dto.ItemView;
 import ru.yandex.practicum.mymarket.exception.ItemNotFoundException;
 import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
@@ -33,19 +34,26 @@ public class CartService {
         this.itemViewMapper = itemViewMapper;
     }
 
-    public Mono<List<ItemView>> getCartItems() {
+    /**
+     * Один {@code findAll()} по корзине и согласованные строки + сумма (для страницы корзины).
+     */
+    public Mono<CartPageData> getCartPageData() {
         return cartItemRepository.findAll()
                 .concatMap(ci -> itemRepository.findById(ci.getItemId())
-                        .map(item -> itemViewMapper.toView(item, ci.getCount())))
-                .collectList();
+                        .map(item -> new CartLine(
+                                itemViewMapper.toView(item, ci.getCount()),
+                                item.getPrice().multiply(BigDecimal.valueOf(ci.getCount())))))
+                .collectList()
+                .map(lines -> {
+                    List<ItemView> items = lines.stream().map(CartLine::view).toList();
+                    BigDecimal total = lines.stream()
+                            .map(CartLine::lineTotal)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    return new CartPageData(items, total);
+                });
     }
 
-    public Mono<BigDecimal> getTotalSum() {
-        return cartItemRepository.findAll()
-                .concatMap(ci -> itemRepository.findById(ci.getItemId())
-                        .map(item -> item.getPrice().multiply(BigDecimal.valueOf(ci.getCount()))))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
+    private record CartLine(ItemView view, BigDecimal lineTotal) {}
 
     @Transactional
     public Mono<Void> changeItemCount(long itemId, ChangeAction action) {

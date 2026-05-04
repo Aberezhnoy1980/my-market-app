@@ -1,14 +1,13 @@
 package ru.yandex.practicum.mymarket.controller;
 
+import ru.yandex.practicum.mymarket.dto.CartPageData;
 import ru.yandex.practicum.mymarket.model.ChangeAction;
 import ru.yandex.practicum.mymarket.service.CartService;
 import ru.yandex.practicum.mymarket.service.OrderService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.math.BigDecimal;
@@ -18,10 +17,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import reactor.core.publisher.Mono;
 
-@SpringBootTest
-@AutoConfigureWebTestClient
-@ActiveProfiles("test")
-class CartControllerWebMvcTest {
+@WebFluxTest(CartController.class)
+class CartControllerWebFluxTest {
 
     @Autowired
     private WebTestClient webTestClient;
@@ -34,8 +31,8 @@ class CartControllerWebMvcTest {
 
     @Test
     void getCartReturnsOk() {
-        when(cartService.getCartItems()).thenReturn(Mono.just(List.of()));
-        when(cartService.getTotalSum()).thenReturn(Mono.just(BigDecimal.ZERO));
+        when(cartService.getCartPageData())
+                .thenReturn(Mono.just(new CartPageData(List.of(), BigDecimal.ZERO)));
 
         webTestClient.get().uri("/cart/items")
                 .exchange()
@@ -45,8 +42,8 @@ class CartControllerWebMvcTest {
     @Test
     void postCartItemsReturnsOk() {
         when(cartService.changeItemCount(3L, ChangeAction.DELETE)).thenReturn(Mono.empty());
-        when(cartService.getCartItems()).thenReturn(Mono.just(List.of()));
-        when(cartService.getTotalSum()).thenReturn(Mono.just(new BigDecimal("100")));
+        when(cartService.getCartPageData())
+                .thenReturn(Mono.just(new CartPageData(List.of(), new BigDecimal("100"))));
 
         webTestClient.post().uri("/cart/items?id=3&action=DELETE")
                 .exchange()

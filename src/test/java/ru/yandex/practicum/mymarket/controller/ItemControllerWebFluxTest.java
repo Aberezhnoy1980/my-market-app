@@ -9,10 +9,8 @@ import ru.yandex.practicum.mymarket.service.CartService;
 import ru.yandex.practicum.mymarket.service.ItemService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.math.BigDecimal;
@@ -25,10 +23,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import reactor.core.publisher.Mono;
 
-@SpringBootTest
-@AutoConfigureWebTestClient
-@ActiveProfiles("test")
-class ItemControllerWebMvcTest {
+@WebFluxTest(ItemController.class)
+class ItemControllerWebFluxTest {
 
     @Autowired
     private WebTestClient webTestClient;

@@ -26,20 +26,20 @@ public class CartController {
 
     @GetMapping("/cart/items")
     public Mono<Rendering> getCart() {
-        return Mono.zip(cartService.getCartItems(), cartService.getTotalSum())
-                .map(tuple -> Rendering.view("cart")
-                        .modelAttribute("items", tuple.getT1())
-                        .modelAttribute("total", tuple.getT2())
+        return cartService.getCartPageData()
+                .map(data -> Rendering.view("cart")
+                        .modelAttribute("items", data.items())
+                        .modelAttribute("total", data.total())
                         .build());
     }
 
     @PostMapping("/cart/items")
     public Mono<Rendering> changeCartItem(@ModelAttribute CartItemChangeForm form) {
         return cartService.changeItemCount(form.id(), form.action())
-                .then(Mono.zip(cartService.getCartItems(), cartService.getTotalSum()))
-                .map(tuple -> Rendering.view("cart")
-                        .modelAttribute("items", tuple.getT1())
-                        .modelAttribute("total", tuple.getT2())
+                .then(cartService.getCartPageData())
+                .map(data -> Rendering.view("cart")
+                        .modelAttribute("items", data.items())
+                        .modelAttribute("total", data.total())
                         .build());
     }
 

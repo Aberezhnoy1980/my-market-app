@@ -94,7 +94,7 @@
 | Что | Как | Зачем |
 |-----|-----|--------|
 | Сервисы | Обычные unit-тесты (`JUnit` + `Mockito`), без Spring-контекста | Чистая логика, быстро и стабильно |
-| Контроллеры | `@SpringBootTest` + `@AutoConfigureWebTestClient` + `WebTestClient`, зависимости сервисов — `@MockBean`, профиль `test` | Контракт HTTP (статусы, редиректы, параметры) без реальной БД |
+| Контроллеры | `@WebFluxTest(конкретный Controller)` + `WebTestClient`, сервисы — `@MockBean` (узкий web-slice, без полного контекста и БД) | Контракт HTTP (статусы, редиректы, параметры) |
 | Контекст приложения | `MyMarketAppApplicationTests` — минимальный smoke (`contextLoads`) на H2 | Быстрая проверка, что приложение собирается с профилем `test` |
 | Репозиторий + миграции | `ItemRepositoryIntegrationTest` — см. ниже | Один раз проверяем **те же** Liquibase changelog и **ту же** семантику запросов, что и в проде |
 

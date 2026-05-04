@@ -87,7 +87,7 @@ class CartServiceTest {
     }
 
     @Test
-    void getTotalSumMultipliesPriceByCount() {
+    void getCartPageDataBuildsLineTotalsAndSum() {
         Item a = new Item();
         a.setPrice(new BigDecimal("10"));
         a.setId(1L);
@@ -104,8 +104,9 @@ class CartServiceTest {
         when(itemRepository.findById(1L)).thenReturn(Mono.just(a));
         when(itemRepository.findById(2L)).thenReturn(Mono.just(b));
 
-        StepVerifier.create(cartService.getTotalSum())
-                .expectNextMatches(total -> total.compareTo(new BigDecimal("35")) == 0)
+        StepVerifier.create(cartService.getCartPageData())
+                .expectNextMatches(data -> data.total().compareTo(new BigDecimal("35")) == 0
+                        && data.items().size() == 2)
                 .verifyComplete();
     }
 }
