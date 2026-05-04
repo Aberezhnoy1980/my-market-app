@@ -1,0 +1,89 @@
+openapi: 3.0.3
+info:
+  title: My Market Payment API
+  description: Интеграция витрины и сервиса платежей (JSON).
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081
+    description: Локальный сервис платежей
+paths:
+  /api/v1/balance:
+    get:
+      operationId: getBalance
+      summary: Текущий баланс счёта
+      tags:
+        - Payments
+      responses:
+        '200':
+          description: Баланс получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+        '503':
+          description: Сервис временно недоступен
+  /api/v1/payments:
+    post:
+      operationId: createPayment
+      summary: Списание средств за заказ
+      tags:
+        - Payments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: Оплата прошла успешно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResult'
+        '402':
+          description: Недостаточно средств
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentError'
+components:
+  schemas:
+    BalanceResponse:
+      type: object
+      required:
+        - balance
+      properties:
+        balance:
+          type: string
+          description: Текущий баланс (десятичная строка, например 1234.56)
+          example: "10000.00"
+    PaymentRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: string
+          description: Сумма к списанию
+          example: "199.99"
+    PaymentResult:
+      type: object
+      required:
+        - balanceAfter
+      properties:
+        balanceAfter:
+          type: string
+          description: Баланс после успешного списания
+    PaymentError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: INSUFFICIENT_FUNDS
+        message:
+          type: string
+          example: Not enough balance for this order.

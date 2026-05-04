@@ -17,9 +17,11 @@
 
 	<modules>
 		<module>my-market-app</module>
+		<module>my-market-payment</module>
 	</modules>
 
 	<properties>
 		<java.version>21</java.version>
+		<openapi-generator.version>7.10.0</openapi-generator.version>
 	</properties>
 </project>

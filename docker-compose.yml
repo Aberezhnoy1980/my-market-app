@@ -35,5 +35,16 @@ services:
     ports:
       - "8080:8080"
 
+  payment:
+    build:
+      context: .
+      dockerfile: Dockerfile.payment
+    container_name: my-market-payment
+    environment:
+      SERVER_PORT: 8081
+      PAYMENT_INITIAL_BALANCE: "10000.00"
+    ports:
+      - "8081:8081"
+
 volumes:
   postgres_data:

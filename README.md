@@ -47,12 +47,19 @@
 - `GET /orders` — список заказов.
 - `GET /orders/{id}` — страница заказа.
 
+Сервис платежей (отдельное приложение, по умолчанию порт **8081**):
+
+- `GET /api/v1/balance` — текущий баланс (JSON).
+- `POST /api/v1/payments` — списание суммы заказа (JSON).
+
 ## Структура проекта (кратко)
 
 Мультипроект Maven: в корне — агрегирующий `pom.xml` (`ru.yandex.practicum:my-market`), модули — в подкаталогах.
 
+- `api/payment-api.yaml` — OpenAPI 3 спецификация интеграции витрины и сервиса платежей.
 - `my-market-app` — витрина (Spring Boot): `src/main/java`, `src/main/resources`, `src/test/java`.
 - `my-market-app/src/main/resources/templates` — Thymeleaf (`items`, `item`, `cart`, `orders`, `order`).
+- `my-market-payment` — RESTful сервис платежей (WebFlux), серверный код по `payment-api.yaml` (OpenAPI Generator, delegate).
 
 ## Локальный запуск
 
@@ -72,6 +79,12 @@
 
 ```bash
 ./mvnw -pl my-market-app spring-boot:run
+```
+
+Запуск сервиса платежей (порт 8081):
+
+```bash
+./mvnw -pl my-market-payment spring-boot:run
 ```
 
 ## Профили
@@ -144,7 +157,13 @@ docker run --rm -p 8080:8080 my-market-app:local
 docker compose up --build
 ```
 
-После старта приложение доступно по адресу: `http://localhost:8080`.
+После старта: витрина — `http://localhost:8080`, сервис платежей — `http://localhost:8081`.
+
+Образ сервиса платежей отдельно:
+
+```bash
+docker build -f Dockerfile.payment -t my-market-payment:local .
+```
 
 ## CI
 
