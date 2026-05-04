@@ -21,7 +21,7 @@
 - Spring Data R2DBC + `r2dbc-postgresql` / `r2dbc-h2` (tests)
 - JDBC + Liquibase (миграции схемы при старте; БД — PostgreSQL или H2 в тестах)
 - PostgreSQL (main/runtime profile)
-- Spring Data Redis Reactive + Lettuce (кеш карточек товаров, JSON по ключу `mymarket:item:{id}`)
+- Spring Data Redis Reactive + Lettuce (кеш карточек и списка товаров: `mymarket:item:{id}`, `mymarket:items:all`)
 - Maven
 - Docker
 - GitHub Actions (CI)
@@ -32,7 +32,7 @@
 
 ## Функциональность
 
-- Витрина товаров: поиск, сортировка, пагинация, изменение количества в корзине.
+- Витрина товаров: поиск, сортировка, пагинация и карточки берутся из Redis cache (cache-aside; при miss — загрузка из БД).
 - Страница товара: просмотр деталей и изменение количества.
 - Корзина: список позиций, изменение количества, удаление, подсчет суммы.
 - Заказы: оформление покупки, список заказов, страница конкретного заказа.

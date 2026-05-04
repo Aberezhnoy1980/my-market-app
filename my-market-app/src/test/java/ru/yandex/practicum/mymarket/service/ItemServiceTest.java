@@ -6,7 +6,6 @@ import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
-import ru.yandex.practicum.mymarket.repository.ItemQueryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,11 +18,9 @@ import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,9 +28,6 @@ class ItemServiceTest {
 
     @Mock
     private CartItemRepository cartItemRepository;
-
-    @Mock
-    private ItemQueryRepository itemQueryRepository;
 
     @Mock
     private ItemCatalogService itemCatalogService;
@@ -59,10 +53,7 @@ class ItemServiceTest {
     @Test
     void getItemsPagePadsRowToThreeColumns() {
         when(cartItemRepository.findAll()).thenReturn(Flux.empty());
-        when(itemQueryRepository.countBySearch(anyString())).thenReturn(Mono.just(1L));
-        when(itemQueryRepository.findItemIds(anyString(), any(SortType.class), anyInt(), anyInt()))
-                .thenReturn(Flux.just(1L));
-        when(itemCatalogService.getItem(1L)).thenReturn(Mono.just(sampleItem));
+        when(itemCatalogService.getAllItems()).thenReturn(Mono.just(List.of(sampleItem)));
 
         StepVerifier.create(itemService.getItemsPage("", SortType.NO, 1, 10))
                 .assertNext(page -> {
@@ -75,6 +66,42 @@ class ItemServiceTest {
                     PagingView paging = page.paging();
                     assertThat(paging.pageNumber()).isEqualTo(1);
                     assertThat(paging.pageSize()).isEqualTo(10);
+                })
+                .verifyComplete();
+    }
+
+    @Test
+    void getItemsPageUsesSearchSortAndPagingOverCachedList() {
+        Item b = new Item();
+        b.setId(2L);
+        b.setTitle("Banana");
+        b.setDescription("Yellow");
+        b.setImgPath("b.png");
+        b.setPrice(new BigDecimal("50"));
+
+        Item a = new Item();
+        a.setId(1L);
+        a.setTitle("Apple");
+        a.setDescription("Green");
+        a.setImgPath("a.png");
+        a.setPrice(new BigDecimal("10"));
+
+        Item c = new Item();
+        c.setId(3L);
+        c.setTitle("Apricot");
+        c.setDescription("Orange");
+        c.setImgPath("c.png");
+        c.setPrice(new BigDecimal("30"));
+
+        when(cartItemRepository.findAll()).thenReturn(Flux.empty());
+        when(itemCatalogService.getAllItems()).thenReturn(Mono.just(List.of(b, a, c)));
+
+        StepVerifier.create(itemService.getItemsPage("ap", SortType.PRICE, 1, 2))
+                .assertNext(page -> {
+                    List<ItemView> row = page.items().getFirst();
+                    assertThat(row.getFirst().title()).isEqualTo("Apple");
+                    assertThat(row.get(1).title()).isEqualTo("Apricot");
+                    assertThat(page.paging().hasNext()).isFalse();
                 })
                 .verifyComplete();
     }

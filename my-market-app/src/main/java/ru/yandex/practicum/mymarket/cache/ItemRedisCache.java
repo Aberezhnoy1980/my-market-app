@@ -2,16 +2,19 @@ package ru.yandex.practicum.mymarket.cache;
 
 import ru.yandex.practicum.mymarket.model.Item;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.stereotype.Component;
-
 import reactor.core.publisher.Mono;
+
+import java.util.List;
 
 @Component
 public class ItemRedisCache {
 
-	private static final String PREFIX = "mymarket:item:";
+	private static final String ITEM_PREFIX = "mymarket:item:";
+	private static final String ITEMS_ALL_KEY = "mymarket:items:all";
 
 	private final ReactiveStringRedisTemplate redis;
 	private final ObjectMapper objectMapper;
@@ -29,7 +32,7 @@ public class ItemRedisCache {
 
 	public Mono<Item> get(long id) {
 		return redis.opsForValue()
-				.get(key(id))
+				.get(itemKey(id))
 				.flatMap(json -> Mono.fromCallable(() -> objectMapper.readValue(json, ItemSnapshot.class).toItem()))
 				.onErrorResume(e -> Mono.empty());
 	}
@@ -41,14 +44,37 @@ public class ItemRedisCache {
 		try {
 			String json = objectMapper.writeValueAsString(ItemSnapshot.from(item));
 			return redis.opsForValue()
-					.set(key(item.getId()), json, properties.getTtl())
+					.set(itemKey(item.getId()), json, properties.getTtl())
 					.then();
 		} catch (JsonProcessingException e) {
 			return Mono.error(e);
 		}
 	}
 
-	private String key(long id) {
-		return PREFIX + id;
+	public Mono<List<Item>> getAll() {
+		return redis.opsForValue()
+				.get(ITEMS_ALL_KEY)
+				.flatMap(json -> Mono.fromCallable(() -> objectMapper.readValue(
+						json,
+						new TypeReference<List<ItemSnapshot>>() {
+						}
+				)))
+				.map(list -> list.stream().map(ItemSnapshot::toItem).toList())
+				.onErrorResume(e -> Mono.empty());
+	}
+
+	public Mono<Void> putAll(List<Item> items) {
+		try {
+			String json = objectMapper.writeValueAsString(items.stream().map(ItemSnapshot::from).toList());
+			return redis.opsForValue()
+					.set(ITEMS_ALL_KEY, json, properties.getTtl())
+					.then();
+		} catch (JsonProcessingException e) {
+			return Mono.error(e);
+		}
+	}
+
+	private String itemKey(long id) {
+		return ITEM_PREFIX + id;
 	}
 }

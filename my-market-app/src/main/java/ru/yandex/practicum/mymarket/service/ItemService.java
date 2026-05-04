@@ -9,17 +9,17 @@ import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
-import ru.yandex.practicum.mymarket.repository.ItemQueryRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import reactor.core.publisher.Mono;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
-
-import reactor.core.publisher.Mono;
 
 @Service
 @Transactional(readOnly = true)
@@ -30,18 +30,15 @@ public class ItemService {
 
     private final CartItemRepository cartItemRepository;
     private final ItemViewMapper itemViewMapper;
-    private final ItemQueryRepository itemQueryRepository;
     private final ItemCatalogService itemCatalogService;
 
     public ItemService(
             CartItemRepository cartItemRepository,
             ItemViewMapper itemViewMapper,
-            ItemQueryRepository itemQueryRepository,
             ItemCatalogService itemCatalogService
     ) {
         this.cartItemRepository = cartItemRepository;
         this.itemViewMapper = itemViewMapper;
-        this.itemQueryRepository = itemQueryRepository;
         this.itemCatalogService = itemCatalogService;
     }
 
@@ -49,19 +46,20 @@ public class ItemService {
         int normalizedPage = Math.max(pageNumber, 1);
         int normalizedPageSize = Math.max(pageSize, 1);
         int offset = (normalizedPage - 1) * normalizedPageSize;
+        String normalizedSearch = normalizeSearch(search);
 
         Mono<Map<Long, Integer>> countsMono = cartItemRepository.findAll()
                 .collectList()
                 .map(list -> list.stream().collect(Collectors.toMap(CartItem::getItemId, CartItem::getCount, (a, b) -> b)));
 
-        Mono<Long> totalMono = itemQueryRepository.countBySearch(search);
+        Mono<List<Item>> pageItemsMono = itemCatalogService.getAllItems()
+                .map(items -> applySearchSortAndPage(items, normalizedSearch, sortType, offset, normalizedPageSize));
 
-        Mono<List<Item>> itemsMono = itemQueryRepository
-                .findItemIds(search, sortType, offset, normalizedPageSize)
-                .concatMap(itemCatalogService::getItem)
-                .collectList();
+        Mono<Long> totalMono = itemCatalogService.getAllItems()
+                .map(items -> applySearch(items, normalizedSearch).size())
+                .map(Integer::longValue);
 
-        return Mono.zip(countsMono.defaultIfEmpty(Map.of()), totalMono, itemsMono)
+        return Mono.zip(countsMono.defaultIfEmpty(Map.of()), totalMono, pageItemsMono)
                 .map(tuple -> {
                     Map<Long, Integer> counts = tuple.getT1();
                     long total = tuple.getT2();
@@ -89,6 +87,55 @@ public class ItemService {
                 .defaultIfEmpty(0);
         return Mono.zip(itemMono, countMono)
                 .map(t -> itemViewMapper.toView(t.getT1(), t.getT2()));
+    }
+
+    private List<Item> applySearchSortAndPage(List<Item> items, String search, SortType sortType, int offset, int limit) {
+        List<Item> filtered = applySearch(items, search);
+        filtered.sort(comparatorFor(sortType));
+        if (offset >= filtered.size()) {
+            return List.of();
+        }
+        int toIndex = Math.min(offset + limit, filtered.size());
+        return filtered.subList(offset, toIndex);
+    }
+
+    private List<Item> applySearch(List<Item> items, String search) {
+        if (search.isEmpty()) {
+            return new ArrayList<>(items);
+        }
+        return items.stream()
+                .filter(item -> {
+                    String title = safeLower(item.getTitle());
+                    String description = safeLower(item.getDescription());
+                    return title.contains(search) || description.contains(search);
+                })
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private Comparator<Item> comparatorFor(SortType sortType) {
+        if (sortType == SortType.ALPHA) {
+            return Comparator.comparing((Item i) -> safeLower(i.getTitle()))
+                    .thenComparing(Item::getId);
+        }
+        if (sortType == SortType.PRICE) {
+            return Comparator.comparing(Item::getPrice)
+                    .thenComparing(Item::getId);
+        }
+        return Comparator.comparing(Item::getId);
+    }
+
+    private String normalizeSearch(String search) {
+        if (search == null) {
+            return "";
+        }
+        return search.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String safeLower(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.toLowerCase(Locale.ROOT);
     }
 
     private List<List<ItemView>> toRowsWithPlaceholders(List<ItemView> items) {
