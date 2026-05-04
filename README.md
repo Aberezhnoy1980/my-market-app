@@ -49,10 +49,10 @@
 
 ## Структура проекта (кратко)
 
-- `src/main/java` — application code.
-- `src/main/resources/templates` — Thymeleaf pages (`items`, `item`, `cart`, `orders`, `order`).
-- `src/main/resources/static` — static assets.
-- `src/test/java` — unit/integration tests.
+Мультипроект Maven: в корне — агрегирующий `pom.xml` (`ru.yandex.practicum:my-market`), модули — в подкаталогах.
+
+- `my-market-app` — витрина (Spring Boot): `src/main/java`, `src/main/resources`, `src/test/java`.
+- `my-market-app/src/main/resources/templates` — Thymeleaf (`items`, `item`, `cart`, `orders`, `order`).
 
 ## Локальный запуск
 
@@ -68,10 +68,10 @@
 ./mvnw -B clean verify
 ```
 
-Запуск приложения (profile по умолчанию, PostgreSQL):
+Запуск витрины (profile по умолчанию, PostgreSQL):
 
 ```bash
-./mvnw spring-boot:run
+./mvnw -pl my-market-app spring-boot:run
 ```
 
 ## Профили
@@ -98,7 +98,7 @@
 | Контекст приложения | `MyMarketAppApplicationTests` — минимальный smoke (`contextLoads`) на H2 | Быстрая проверка, что приложение собирается с профилем `test` |
 | Репозиторий + миграции | `ItemRepositoryIntegrationTest` — см. ниже | Один раз проверяем **те же** Liquibase changelog и **ту же** семантику запросов, что и в проде |
 
-Профиль **`test`** (`src/test/resources/application-test.properties`): встроенная **H2** в режиме, совместимом с PostgreSQL, для **JDBC** (Liquibase) и **R2DBC**. Это сознательный компромисс: большинство тестов не завязаны на Docker и проходят везде (в т.ч. у проверяющего без локального PostgreSQL).
+Профиль **`test`** (`my-market-app/src/test/resources/application-test.properties`): встроенная **H2** в режиме, совместимом с PostgreSQL, для **JDBC** (Liquibase) и **R2DBC**. Это сознательный компромисс: большинство тестов не завязаны на Docker и проходят везде (в т.ч. у проверяющего без локального PostgreSQL).
 
 ### Почему отдельный интеграционный тест с PostgreSQL
 
