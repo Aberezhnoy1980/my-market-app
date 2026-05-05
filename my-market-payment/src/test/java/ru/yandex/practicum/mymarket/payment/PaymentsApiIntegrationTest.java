@@ -1,27 +1,24 @@
 package ru.yandex.practicum.mymarket.payment;
 
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("test")
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class PaymentsApiIntegrationTest {
 
 	@Autowired
 	private WebTestClient webTestClient;
 
 	@Test
-	@Order(1)
 	void getBalanceReturnsConfiguredAmount() {
 		webTestClient.get().uri("/api/v1/balance")
 				.exchange()
@@ -32,7 +29,6 @@ class PaymentsApiIntegrationTest {
 	}
 
 	@Test
-	@Order(2)
 	void successfulPaymentReturnsBalanceAfter() {
 		webTestClient.post().uri("/api/v1/payments")
 				.contentType(MediaType.APPLICATION_JSON)
@@ -44,7 +40,6 @@ class PaymentsApiIntegrationTest {
 	}
 
 	@Test
-	@Order(3)
 	void insufficientFundsReturns402() {
 		webTestClient.post().uri("/api/v1/payments")
 				.contentType(MediaType.APPLICATION_JSON)
