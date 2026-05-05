@@ -6,6 +6,7 @@ import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
+import ru.yandex.practicum.mymarket.repository.ItemQueryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +33,9 @@ class ItemServiceTest {
     @Mock
     private ItemCatalogService itemCatalogService;
 
+    @Mock
+    private ItemQueryRepository itemQueryRepository;
+
     @Spy
     private ItemViewMapper itemViewMapper = new ItemViewMapper();
 
@@ -53,7 +57,9 @@ class ItemServiceTest {
     @Test
     void getItemsPagePadsRowToThreeColumns() {
         when(cartItemRepository.findAll()).thenReturn(Flux.empty());
-        when(itemCatalogService.getAllItems()).thenReturn(Mono.just(List.of(sampleItem)));
+        when(itemQueryRepository.countBySearch("")).thenReturn(Mono.just(1L));
+        when(itemQueryRepository.findItemIds("", SortType.NO, 0, 10)).thenReturn(Flux.just(sampleItem.getId()));
+        when(itemCatalogService.getItem(sampleItem.getId())).thenReturn(Mono.just(sampleItem));
 
         StepVerifier.create(itemService.getItemsPage("", SortType.NO, 1, 10))
                 .assertNext(page -> {
@@ -71,14 +77,7 @@ class ItemServiceTest {
     }
 
     @Test
-    void getItemsPageUsesSearchSortAndPagingOverCachedList() {
-        Item b = new Item();
-        b.setId(2L);
-        b.setTitle("Banana");
-        b.setDescription("Yellow");
-        b.setImgPath("b.png");
-        b.setPrice(new BigDecimal("50"));
-
+    void getItemsPageUsesQueryRepoIdsAndCatalogLookup() {
         Item a = new Item();
         a.setId(1L);
         a.setTitle("Apple");
@@ -94,7 +93,11 @@ class ItemServiceTest {
         c.setPrice(new BigDecimal("30"));
 
         when(cartItemRepository.findAll()).thenReturn(Flux.empty());
-        when(itemCatalogService.getAllItems()).thenReturn(Mono.just(List.of(b, a, c)));
+        when(itemQueryRepository.countBySearch("ap")).thenReturn(Mono.just(2L));
+        when(itemQueryRepository.findItemIds("ap", SortType.PRICE, 0, 2))
+                .thenReturn(Flux.just(a.getId(), c.getId()));
+        when(itemCatalogService.getItem(a.getId())).thenReturn(Mono.just(a));
+        when(itemCatalogService.getItem(c.getId())).thenReturn(Mono.just(c));
 
         StepVerifier.create(itemService.getItemsPage("ap", SortType.PRICE, 1, 2))
                 .assertNext(page -> {
