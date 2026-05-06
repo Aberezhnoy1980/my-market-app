@@ -51,6 +51,14 @@ class CartControllerWebFluxTest {
     }
 
     @Test
+    void getCartRedirectsToLoginForAnonymous() {
+        webTestClient.get().uri("/cart/items")
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().valueMatches("Location", ".*/login");
+    }
+
+    @Test
     void postCartItemsReturnsOk() {
         when(cartService.changeItemCount(anyString(), eq(3L), eq(ChangeAction.DELETE))).thenReturn(Mono.empty());
         when(cartService.getCartPageData(anyString()))

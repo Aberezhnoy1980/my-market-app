@@ -44,6 +44,14 @@ class OrderControllerWebFluxTest {
     }
 
     @Test
+    void getOrdersRedirectsToLoginForAnonymous() {
+        webTestClient.get().uri("/orders")
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().valueMatches("Location", ".*/login");
+    }
+
+    @Test
     void getOrderReturnsOk() {
         OrderView order = new OrderView(
                 1L,

@@ -94,6 +94,14 @@ class ItemControllerWebFluxTest {
     }
 
     @Test
+    void postItemsRedirectsToLoginForAnonymous() {
+        webTestClient.mutateWith(csrf()).post().uri("/items?id=1&action=PLUS")
+                .exchange()
+                .expectStatus().is3xxRedirection()
+                .expectHeader().valueMatches("Location", ".*/login");
+    }
+
+    @Test
     void postItemByIdReturnsOk() {
         when(cartService.changeItemCount(anyString(), eq(2L), eq(ChangeAction.MINUS))).thenReturn(Mono.empty());
         when(itemService.getItemById(eq(2L), any()))
