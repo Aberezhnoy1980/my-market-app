@@ -16,6 +16,8 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockUser;
@@ -39,7 +41,7 @@ class CartControllerWebFluxTest {
 
     @Test
     void getCartReturnsOk() {
-        when(cartService.getCartPageData())
+        when(cartService.getCartPageData(anyString()))
                 .thenReturn(Mono.just(new CartPageData(List.of(), BigDecimal.ZERO, "0 руб.", false, null)));
 
         webTestClient.mutateWith(mockUser()).get().uri("/cart/items")
@@ -49,20 +51,20 @@ class CartControllerWebFluxTest {
 
     @Test
     void postCartItemsReturnsOk() {
-        when(cartService.changeItemCount(3L, ChangeAction.DELETE)).thenReturn(Mono.empty());
-        when(cartService.getCartPageData())
+        when(cartService.changeItemCount(anyString(), eq(3L), eq(ChangeAction.DELETE))).thenReturn(Mono.empty());
+        when(cartService.getCartPageData(anyString()))
                 .thenReturn(Mono.just(new CartPageData(List.of(), new BigDecimal("100"), "500 руб.", true, null)));
 
         webTestClient.mutateWith(mockUser()).post().uri("/cart/items?id=3&action=DELETE")
                 .exchange()
                 .expectStatus().isOk();
 
-        verify(cartService).changeItemCount(3L, ChangeAction.DELETE);
+        verify(cartService).changeItemCount(anyString(), eq(3L), eq(ChangeAction.DELETE));
     }
 
     @Test
     void postBuyRedirectsToNewOrder() {
-        when(orderService.placeOrder()).thenReturn(Mono.just(42L));
+        when(orderService.placeOrder(anyString())).thenReturn(Mono.just(42L));
 
         webTestClient.mutateWith(mockUser()).post().uri("/buy")
                 .exchange()

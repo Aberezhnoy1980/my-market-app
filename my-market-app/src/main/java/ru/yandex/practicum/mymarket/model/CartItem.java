@@ -13,6 +13,9 @@ public class CartItem {
     @Column("item_id")
     private Long itemId;
 
+    @Column("user_id")
+    private Long userId;
+
     private int count;
 
     public Long getId() {
@@ -37,5 +40,13 @@ public class CartItem {
 
     public void setCount(int count) {
         this.count = count;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }

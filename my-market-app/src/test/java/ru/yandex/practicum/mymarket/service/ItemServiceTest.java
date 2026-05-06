@@ -5,6 +5,7 @@ import ru.yandex.practicum.mymarket.dto.PagingView;
 import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
+import ru.yandex.practicum.mymarket.repository.AppUserRepository;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.ItemQueryRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,9 @@ class ItemServiceTest {
     @Mock
     private ItemQueryRepository itemQueryRepository;
 
+    @Mock
+    private AppUserRepository appUserRepository;
+
     @Spy
     private ItemViewMapper itemViewMapper = new ItemViewMapper();
 
@@ -56,12 +60,11 @@ class ItemServiceTest {
 
     @Test
     void getItemsPagePadsRowToThreeColumns() {
-        when(cartItemRepository.findAll()).thenReturn(Flux.empty());
         when(itemQueryRepository.countBySearch("")).thenReturn(Mono.just(1L));
         when(itemQueryRepository.findItemIds("", SortType.NO, 0, 10)).thenReturn(Flux.just(sampleItem.getId()));
         when(itemCatalogService.getItem(sampleItem.getId())).thenReturn(Mono.just(sampleItem));
 
-        StepVerifier.create(itemService.getItemsPage("", SortType.NO, 1, 10))
+        StepVerifier.create(itemService.getItemsPage("", SortType.NO, 1, 10, null))
                 .assertNext(page -> {
                     assertThat(page.items()).hasSize(1);
                     java.util.List<ItemView> row = page.items().getFirst();
@@ -92,14 +95,13 @@ class ItemServiceTest {
         c.setImgPath("c.png");
         c.setPrice(new BigDecimal("30"));
 
-        when(cartItemRepository.findAll()).thenReturn(Flux.empty());
         when(itemQueryRepository.countBySearch("ap")).thenReturn(Mono.just(2L));
         when(itemQueryRepository.findItemIds("ap", SortType.PRICE, 0, 2))
                 .thenReturn(Flux.just(a.getId(), c.getId()));
         when(itemCatalogService.getItem(a.getId())).thenReturn(Mono.just(a));
         when(itemCatalogService.getItem(c.getId())).thenReturn(Mono.just(c));
 
-        StepVerifier.create(itemService.getItemsPage("ap", SortType.PRICE, 1, 2))
+        StepVerifier.create(itemService.getItemsPage("ap", SortType.PRICE, 1, 2, null))
                 .assertNext(page -> {
                     List<ItemView> row = page.items().getFirst();
                     assertThat(row.getFirst().title()).isEqualTo("Apple");

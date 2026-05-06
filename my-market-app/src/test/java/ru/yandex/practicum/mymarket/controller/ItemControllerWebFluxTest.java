@@ -19,6 +19,7 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import java.math.BigDecimal;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -49,7 +50,7 @@ class ItemControllerWebFluxTest {
                 List.of(),
                 new PagingView(5, 1, false, false)
         );
-        when(itemService.getItemsPage(anyString(), eq(SortType.NO), anyInt(), anyInt()))
+        when(itemService.getItemsPage(anyString(), eq(SortType.NO), anyInt(), anyInt(), any()))
                 .thenReturn(Mono.just(page));
 
         webTestClient.get().uri(uriBuilder -> uriBuilder.path("/items")
@@ -64,7 +65,7 @@ class ItemControllerWebFluxTest {
 
     @Test
     void getItemByIdReturnsOk() {
-        when(itemService.getItemById(1L))
+        when(itemService.getItemById(eq(1L), any()))
                 .thenReturn(Mono.just(new ItemView(1L, "T", "D", "img.png", new BigDecimal("100"), 0)));
 
         webTestClient.get().uri("/items/1")
@@ -74,7 +75,7 @@ class ItemControllerWebFluxTest {
 
     @Test
     void postItemsRedirectsWithQueryParams() {
-        when(cartService.changeItemCount(eq(1L), eq(ChangeAction.PLUS))).thenReturn(Mono.empty());
+        when(cartService.changeItemCount(anyString(), eq(1L), eq(ChangeAction.PLUS))).thenReturn(Mono.empty());
 
         webTestClient.mutateWith(mockUser()).post().uri(uriBuilder -> uriBuilder.path("/items")
                         .queryParam("id", "1")
@@ -88,19 +89,19 @@ class ItemControllerWebFluxTest {
                 .expectStatus().is3xxRedirection()
                 .expectHeader().valueEquals("Location", "/items?search=a%20b&sort=ALPHA&pageNumber=2&pageSize=10");
 
-        verify(cartService).changeItemCount(1L, ChangeAction.PLUS);
+        verify(cartService).changeItemCount(anyString(), eq(1L), eq(ChangeAction.PLUS));
     }
 
     @Test
     void postItemByIdReturnsOk() {
-        when(cartService.changeItemCount(eq(2L), eq(ChangeAction.MINUS))).thenReturn(Mono.empty());
-        when(itemService.getItemById(2L))
+        when(cartService.changeItemCount(anyString(), eq(2L), eq(ChangeAction.MINUS))).thenReturn(Mono.empty());
+        when(itemService.getItemById(eq(2L), any()))
                 .thenReturn(Mono.just(new ItemView(2L, "X", "Y", "z.png", new BigDecimal("50"), 1)));
 
         webTestClient.mutateWith(mockUser()).post().uri("/items/2?action=MINUS")
                 .exchange()
                 .expectStatus().isOk();
 
-        verify(cartService).changeItemCount(2L, ChangeAction.MINUS);
+        verify(cartService).changeItemCount(anyString(), eq(2L), eq(ChangeAction.MINUS));
     }
 }

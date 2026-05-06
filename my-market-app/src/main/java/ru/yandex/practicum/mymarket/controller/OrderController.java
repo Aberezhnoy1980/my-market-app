@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.reactive.result.view.Rendering;
 
+import java.security.Principal;
+
 import reactor.core.publisher.Mono;
 
 @Controller
@@ -21,8 +23,8 @@ public class OrderController {
     }
 
     @GetMapping
-    public Mono<Rendering> getOrders() {
-        return orderService.getOrders()
+    public Mono<Rendering> getOrders(Principal principal) {
+        return orderService.getOrders(principal.getName())
                 .map(orders -> Rendering.view("orders")
                         .modelAttribute("orders", orders)
                         .build());
@@ -31,9 +33,10 @@ public class OrderController {
     @GetMapping("/{id}")
     public Mono<Rendering> getOrder(
             @PathVariable long id,
+            Principal principal,
             @RequestParam(defaultValue = "false") boolean newOrder
     ) {
-        return orderService.getOrderById(id)
+        return orderService.getOrderById(principal.getName(), id)
                 .map(order -> Rendering.view("order")
                         .modelAttribute("order", order)
                         .modelAttribute("newOrder", newOrder)
