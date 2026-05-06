@@ -22,19 +22,28 @@ public class PaymentsApiDelegateImpl implements PaymentsApiDelegate {
 
 	@Override
 	public Mono<BalanceResponse> getBalance(ServerWebExchange exchange) {
-		return Mono.fromCallable(() -> new BalanceResponse(accountBalanceService.currentBalancePlain()));
+		return accountId(exchange)
+				.map(accountBalanceService::currentBalancePlain)
+				.map(BalanceResponse::new);
 	}
 
 	@Override
 	public Mono<PaymentResult> createPayment(Mono<PaymentRequest> paymentRequest, ServerWebExchange exchange) {
-		return paymentRequest.flatMap(req -> {
+		return accountId(exchange)
+				.flatMap(accountId -> paymentRequest.flatMap(req -> {
 					try {
 						BigDecimal amount = new BigDecimal(req.getAmount());
-						return accountBalanceService.debit(amount);
+						return accountBalanceService.debit(accountId, amount);
 					} catch (NumberFormatException ex) {
 						return Mono.error(ex);
 					}
-				})
+				}))
 				.map(after -> new PaymentResult(after.toPlainString()));
+	}
+
+	private Mono<String> accountId(ServerWebExchange exchange) {
+		return exchange.getPrincipal()
+				.map(principal -> principal.getName())
+				.defaultIfEmpty("anonymous");
 	}
 }

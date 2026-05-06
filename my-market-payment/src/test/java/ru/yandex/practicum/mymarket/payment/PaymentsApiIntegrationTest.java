@@ -9,6 +9,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockJwt;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient
 @ActiveProfiles("test")
@@ -20,7 +22,8 @@ class PaymentsApiIntegrationTest {
 
 	@Test
 	void getBalanceReturnsConfiguredAmount() {
-		webTestClient.get().uri("/api/v1/balance")
+		webTestClient.mutateWith(mockJwt().jwt(jwt -> jwt.subject("user")))
+				.get().uri("/api/v1/balance")
 				.exchange()
 				.expectStatus().isOk()
 				.expectHeader().contentTypeCompatibleWith(MediaType.APPLICATION_JSON)
@@ -30,7 +33,8 @@ class PaymentsApiIntegrationTest {
 
 	@Test
 	void successfulPaymentReturnsBalanceAfter() {
-		webTestClient.post().uri("/api/v1/payments")
+		webTestClient.mutateWith(mockJwt().jwt(jwt -> jwt.subject("user")))
+				.post().uri("/api/v1/payments")
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue("{\"amount\":\"200.50\"}")
 				.exchange()
@@ -41,12 +45,20 @@ class PaymentsApiIntegrationTest {
 
 	@Test
 	void insufficientFundsReturns402() {
-		webTestClient.post().uri("/api/v1/payments")
+		webTestClient.mutateWith(mockJwt().jwt(jwt -> jwt.subject("user")))
+				.post().uri("/api/v1/payments")
 				.contentType(MediaType.APPLICATION_JSON)
 				.bodyValue("{\"amount\":\"5000\"}")
 				.exchange()
 				.expectStatus().isEqualTo(402)
 				.expectBody()
 				.jsonPath("$.code").isEqualTo("INSUFFICIENT_FUNDS");
+	}
+
+	@Test
+	void paymentEndpointsRequireAuthentication() {
+		webTestClient.get().uri("/api/v1/balance")
+				.exchange()
+				.expectStatus().isUnauthorized();
 	}
 }

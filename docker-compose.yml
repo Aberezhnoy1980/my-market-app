@@ -26,6 +26,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      keycloak:
+        condition: service_started
       payment:
         condition: service_started
     environment:
@@ -38,6 +40,9 @@ services:
       SERVER_PORT: 8080
       PAYMENT_SERVICE_BASE_URL: http://payment:8081
       SPRING_DATA_REDIS_HOST: redis
+      KEYCLOAK_TOKEN_URI: http://keycloak:8080/realms/my-market/protocol/openid-connect/token
+      PAYMENT_OAUTH2_CLIENT_ID: my-market-app-client
+      PAYMENT_OAUTH2_CLIENT_SECRET: my-market-app-client-secret
     ports:
       - "8080:8080"
 
@@ -46,11 +51,27 @@ services:
       context: .
       dockerfile: Dockerfile.payment
     container_name: my-market-payment
+    depends_on:
+      keycloak:
+        condition: service_started
     environment:
       SERVER_PORT: 8081
       PAYMENT_INITIAL_BALANCE: "10000.00"
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/my-market
     ports:
       - "8081:8081"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0.4
+    container_name: my-market-keycloak
+    command: ["start-dev", "--http-port=8080", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./infra/keycloak/my-market-realm.json:/opt/keycloak/data/import/my-market-realm.json:ro
 
   redis:
     image: redis:7-alpine

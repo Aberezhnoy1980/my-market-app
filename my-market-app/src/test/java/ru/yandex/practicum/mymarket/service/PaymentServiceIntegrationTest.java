@@ -35,6 +35,7 @@ class PaymentServiceIntegrationTest {
 	@DynamicPropertySource
 	static void registerPaymentBaseUrl(DynamicPropertyRegistry registry) {
 		registry.add("payment.service.base-url", () -> "http://127.0.0.1:" + PAYMENT_SERVER.getPort());
+		registry.add("payment.oauth2.enabled", () -> "false");
 	}
 
 	@AfterAll
