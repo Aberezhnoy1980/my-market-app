@@ -41,6 +41,9 @@ databaseChangeLog:
   - changeSet:
       id: 007-seed-default-user
       author: assistant
+      validCheckSum:
+        - 9:d03f9ae59b30df4ab0eb4fdde00b7aba
+        - 9:6b6e818c6871d6833270a267fed457c2
       changes:
         - insert:
             tableName: users

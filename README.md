@@ -127,6 +127,40 @@
   - добавляет Bearer token в вызовы `/api/v1/balance` и `/api/v1/payments`;
   - сервис платежей валидирует JWT по `issuer-uri`.
 
+## Smoke-check (обязательно перед PR)
+
+Минимальный регресс-пакет для локальной проверки после изменений в security/integration:
+
+1. Поднять стенд:
+
+```bash
+docker compose up --build --force-recreate
+```
+
+1. Happy path:
+
+- открыть `http://localhost:8080`;
+- логин `user/password`;
+- добавить товар в корзину и выполнить покупку;
+- проверить, что заказ появился в `GET /orders`, а баланс изменился.
+
+1. Session/logout sanity:
+
+- выйти (`/logout`) и зайти снова;
+- убедиться, что данные пользователя (orders/cart/balance) консистентны после новой сессии.
+
+1. Negative OAuth2 path (межсервисная авторизация):
+
+- временно задать неверный `PAYMENT_OAUTH2_CLIENT_SECRET` в `docker-compose.yml` для `app`;
+- перезапустить `docker compose up --build --force-recreate`;
+- выполнить покупку и убедиться, что запрос к payment не проходит по OAuth2 (ожидаем controlled failure), а витрина не падает целиком;
+- вернуть корректный secret и повторить happy path.
+
+1. Если менялись Liquibase changelog-файлы:
+
+- не редактировать уже применённые changeset без `validCheckSum`/follow-up changeset;
+- при проблемах валидации проверять `databasechangelog` и logs `app`.
+
 ## Тесты и профиль `test`
 
 Подход: **быстрый основной прогон без Docker** плюс **один «тяжёлый» интеграционный сценарий** там, где нужно проверить связку, которую H2 не воспроизводит один в один с продакшеном.

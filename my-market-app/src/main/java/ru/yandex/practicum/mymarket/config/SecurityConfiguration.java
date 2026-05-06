@@ -29,7 +29,7 @@ public class SecurityConfiguration {
                         .pathMatchers(HttpMethod.POST, "/items", "/items/**").authenticated()
                         .pathMatchers("/cart/**", "/orders/**", "/buy").hasRole("USER")
                         .anyExchange().permitAll())
-                .formLogin(form -> form.loginPage("/login"))
+                .formLogin(form -> {})
                 .logout(logout -> logout.logoutUrl("/logout"))
                 .build();
     }
