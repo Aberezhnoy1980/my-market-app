@@ -112,4 +112,13 @@ class PaymentServiceIntegrationTest {
 				.expectError(PaymentServiceUnavailableException.class)
 				.verify();
 	}
+
+	@Test
+	void chargeOrderAmountUnauthorizedClient() {
+		PAYMENT_SERVER.enqueue(new MockResponse().setResponseCode(401));
+
+		StepVerifier.create(paymentService.chargeOrderAmount(new BigDecimal("10.00")))
+				.expectError(PaymentServiceUnavailableException.class)
+				.verify();
+	}
 }
