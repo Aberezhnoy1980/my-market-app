@@ -24,6 +24,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+      payment:
+        condition: service_started
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/my_market_app
       SPRING_DATASOURCE_USERNAME: my_market_user
@@ -32,8 +36,32 @@ services:
       SPRING_R2DBC_USERNAME: my_market_user
       SPRING_R2DBC_PASSWORD: my_market_password
       SERVER_PORT: 8080
+      PAYMENT_SERVICE_BASE_URL: http://payment:8081
+      SPRING_DATA_REDIS_HOST: redis
     ports:
       - "8080:8080"
+
+  payment:
+    build:
+      context: .
+      dockerfile: Dockerfile.payment
+    container_name: my-market-payment
+    environment:
+      SERVER_PORT: 8081
+      PAYMENT_INITIAL_BALANCE: "10000.00"
+    ports:
+      - "8081:8081"
+
+  redis:
+    image: redis:7-alpine
+    container_name: my-market-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
 
 volumes:
   postgres_data:
