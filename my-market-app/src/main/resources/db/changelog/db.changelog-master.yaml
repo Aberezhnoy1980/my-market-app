@@ -5,3 +5,5 @@ databaseChangeLog:
       file: db/changelog/changes/002-seed-items.yaml
   - include:
       file: db/changelog/changes/003-alter-price-columns-to-decimal.yaml
+  - include:
+      file: db/changelog/changes/004-create-users.yaml

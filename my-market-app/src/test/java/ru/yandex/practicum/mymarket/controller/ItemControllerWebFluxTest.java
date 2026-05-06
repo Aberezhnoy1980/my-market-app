@@ -3,14 +3,17 @@ package ru.yandex.practicum.mymarket.controller;
 import ru.yandex.practicum.mymarket.dto.ItemView;
 import ru.yandex.practicum.mymarket.dto.ItemsPageView;
 import ru.yandex.practicum.mymarket.dto.PagingView;
+import ru.yandex.practicum.mymarket.config.SecurityConfiguration;
 import ru.yandex.practicum.mymarket.model.ChangeAction;
 import ru.yandex.practicum.mymarket.model.SortType;
+import ru.yandex.practicum.mymarket.repository.AppUserRepository;
 import ru.yandex.practicum.mymarket.service.CartService;
 import ru.yandex.practicum.mymarket.service.ItemService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.reactive.server.WebTestClient;
 
 import java.math.BigDecimal;
@@ -21,9 +24,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockUser;
 import reactor.core.publisher.Mono;
 
 @WebFluxTest(ItemController.class)
+@Import(SecurityConfiguration.class)
 class ItemControllerWebFluxTest {
 
     @Autowired
@@ -34,6 +39,9 @@ class ItemControllerWebFluxTest {
 
     @MockBean
     private CartService cartService;
+
+    @MockBean
+    private AppUserRepository appUserRepository;
 
     @Test
     void getItemsReturnsOk() {
@@ -68,7 +76,7 @@ class ItemControllerWebFluxTest {
     void postItemsRedirectsWithQueryParams() {
         when(cartService.changeItemCount(eq(1L), eq(ChangeAction.PLUS))).thenReturn(Mono.empty());
 
-        webTestClient.post().uri(uriBuilder -> uriBuilder.path("/items")
+        webTestClient.mutateWith(mockUser()).post().uri(uriBuilder -> uriBuilder.path("/items")
                         .queryParam("id", "1")
                         .queryParam("search", "a b")
                         .queryParam("sort", "ALPHA")
@@ -89,7 +97,7 @@ class ItemControllerWebFluxTest {
         when(itemService.getItemById(2L))
                 .thenReturn(Mono.just(new ItemView(2L, "X", "Y", "z.png", new BigDecimal("50"), 1)));
 
-        webTestClient.post().uri("/items/2?action=MINUS")
+        webTestClient.mutateWith(mockUser()).post().uri("/items/2?action=MINUS")
                 .exchange()
                 .expectStatus().isOk();
 
