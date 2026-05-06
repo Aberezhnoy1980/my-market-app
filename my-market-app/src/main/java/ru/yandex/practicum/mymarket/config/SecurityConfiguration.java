@@ -7,6 +7,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -23,7 +24,6 @@ public class SecurityConfiguration {
     @Bean
     public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         return http
-                .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
                         .pathMatchers(HttpMethod.GET, "/", "/items", "/items/**", "/login").permitAll()
                         .pathMatchers(HttpMethod.POST, "/items", "/items/**").authenticated()
@@ -40,7 +40,7 @@ public class SecurityConfiguration {
     }
 
     @Bean
-    public org.springframework.security.core.userdetails.ReactiveUserDetailsService reactiveUserDetailsService(
+    public ReactiveUserDetailsService reactiveUserDetailsService(
             AppUserRepository appUserRepository
     ) {
         return username -> appUserRepository.findByUsername(username)

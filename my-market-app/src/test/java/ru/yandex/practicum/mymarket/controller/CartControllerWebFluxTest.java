@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockUser;
 import reactor.core.publisher.Mono;
 
@@ -55,7 +56,7 @@ class CartControllerWebFluxTest {
         when(cartService.getCartPageData(anyString()))
                 .thenReturn(Mono.just(new CartPageData(List.of(), new BigDecimal("100"), "500 руб.", true, null)));
 
-        webTestClient.mutateWith(mockUser()).post().uri("/cart/items?id=3&action=DELETE")
+        webTestClient.mutateWith(mockUser()).mutateWith(csrf()).post().uri("/cart/items?id=3&action=DELETE")
                 .exchange()
                 .expectStatus().isOk();
 
@@ -66,7 +67,7 @@ class CartControllerWebFluxTest {
     void postBuyRedirectsToNewOrder() {
         when(orderService.placeOrder(anyString())).thenReturn(Mono.just(42L));
 
-        webTestClient.mutateWith(mockUser()).post().uri("/buy")
+        webTestClient.mutateWith(mockUser()).mutateWith(csrf()).post().uri("/buy")
                 .exchange()
                 .expectStatus().is3xxRedirection()
                 .expectHeader().valueEquals("Location", "/orders/42?newOrder=true");

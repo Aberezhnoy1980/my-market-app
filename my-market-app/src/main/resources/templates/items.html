@@ -64,6 +64,7 @@
                         <p class="card-text" th:text="${item.description()}"></p>
                         <form method="post" th:action="@{/items}">
                             <div class="hstack gap-3">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
                                 <input type="hidden" name="id" th:value="${item.id()}">
                                 <input type="hidden" name="search" th:value="${search}">
                                 <input type="hidden" name="sort" th:value="${sort}">

@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.mockUser;
 import reactor.core.publisher.Mono;
 
@@ -77,7 +78,7 @@ class ItemControllerWebFluxTest {
     void postItemsRedirectsWithQueryParams() {
         when(cartService.changeItemCount(anyString(), eq(1L), eq(ChangeAction.PLUS))).thenReturn(Mono.empty());
 
-        webTestClient.mutateWith(mockUser()).post().uri(uriBuilder -> uriBuilder.path("/items")
+        webTestClient.mutateWith(mockUser()).mutateWith(csrf()).post().uri(uriBuilder -> uriBuilder.path("/items")
                         .queryParam("id", "1")
                         .queryParam("search", "a b")
                         .queryParam("sort", "ALPHA")
@@ -98,7 +99,7 @@ class ItemControllerWebFluxTest {
         when(itemService.getItemById(eq(2L), any()))
                 .thenReturn(Mono.just(new ItemView(2L, "X", "Y", "z.png", new BigDecimal("50"), 1)));
 
-        webTestClient.mutateWith(mockUser()).post().uri("/items/2?action=MINUS")
+        webTestClient.mutateWith(mockUser()).mutateWith(csrf()).post().uri("/items/2?action=MINUS")
                 .exchange()
                 .expectStatus().isOk();
 
