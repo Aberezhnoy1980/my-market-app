@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 import reactor.core.publisher.Mono;
@@ -16,30 +17,31 @@ public class AccountBalanceService {
 
 	private static final int SCALE = 2;
 
-	private final AtomicReference<BigDecimal> balance;
+	private final BigDecimal initialBalance;
+	private final ConcurrentHashMap<String, AtomicReference<BigDecimal>> balances = new ConcurrentHashMap<>();
 
 	public AccountBalanceService(@Value("${payment.initial-balance}") String initialBalanceRaw) {
-		BigDecimal initial = new BigDecimal(initialBalanceRaw).setScale(SCALE, RoundingMode.HALF_UP);
-		this.balance = new AtomicReference<>(initial);
+		this.initialBalance = new BigDecimal(initialBalanceRaw).setScale(SCALE, RoundingMode.HALF_UP);
 	}
 
-	public String currentBalancePlain() {
-		return balance.get().toPlainString();
+	public String currentBalancePlain(String accountId) {
+		return account(accountId).get().toPlainString();
 	}
 
 	/**
 	 * Списывает сумму; при успехе возвращает баланс после списания.
 	 */
-	public Mono<BigDecimal> debit(BigDecimal amount) {
+	public Mono<BigDecimal> debit(String accountId, BigDecimal amount) {
 		if (amount == null || amount.signum() <= 0) {
 			return Mono.error(new IllegalArgumentException("Amount must be positive"));
 		}
 		BigDecimal normalized = amount.setScale(SCALE, RoundingMode.HALF_UP);
-		return Mono.fromCallable(() -> debitSync(normalized))
+		return Mono.fromCallable(() -> debitSync(accountId, normalized))
 				.subscribeOn(Schedulers.boundedElastic());
 	}
 
-	private BigDecimal debitSync(BigDecimal normalized) {
+	private BigDecimal debitSync(String accountId, BigDecimal normalized) {
+		AtomicReference<BigDecimal> balance = account(accountId);
 		for (;;) {
 			BigDecimal current = balance.get();
 			BigDecimal next = current.subtract(normalized);
@@ -50,5 +52,10 @@ public class AccountBalanceService {
 				return next;
 			}
 		}
+	}
+
+	private AtomicReference<BigDecimal> account(String accountId) {
+		String normalized = (accountId == null || accountId.isBlank()) ? "anonymous" : accountId;
+		return balances.computeIfAbsent(normalized, key -> new AtomicReference<>(initialBalance));
 	}
 }

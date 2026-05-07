@@ -8,6 +8,7 @@ import ru.yandex.practicum.mymarket.mapper.ItemViewMapper;
 import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.SortType;
+import ru.yandex.practicum.mymarket.repository.AppUserRepository;
 import ru.yandex.practicum.mymarket.repository.CartItemRepository;
 import ru.yandex.practicum.mymarket.repository.ItemQueryRepository;
 import org.springframework.stereotype.Service;
@@ -33,28 +34,29 @@ public class ItemService {
     private final ItemViewMapper itemViewMapper;
     private final ItemCatalogService itemCatalogService;
     private final ItemQueryRepository itemQueryRepository;
+    private final AppUserRepository appUserRepository;
 
     public ItemService(
             CartItemRepository cartItemRepository,
             ItemViewMapper itemViewMapper,
             ItemCatalogService itemCatalogService,
-            ItemQueryRepository itemQueryRepository
+            ItemQueryRepository itemQueryRepository,
+            AppUserRepository appUserRepository
     ) {
         this.cartItemRepository = cartItemRepository;
         this.itemViewMapper = itemViewMapper;
         this.itemCatalogService = itemCatalogService;
         this.itemQueryRepository = itemQueryRepository;
+        this.appUserRepository = appUserRepository;
     }
 
-    public Mono<ItemsPageView> getItemsPage(String search, SortType sortType, int pageNumber, int pageSize) {
+    public Mono<ItemsPageView> getItemsPage(String search, SortType sortType, int pageNumber, int pageSize, String username) {
         int normalizedPage = Math.max(pageNumber, 1);
         int normalizedPageSize = Math.max(pageSize, 1);
         int offset = (normalizedPage - 1) * normalizedPageSize;
         String normalizedSearch = normalizeSearch(search);
 
-        Mono<Map<Long, Integer>> countsMono = cartItemRepository.findAll()
-                .collectList()
-                .map(list -> list.stream().collect(Collectors.toMap(CartItem::getItemId, CartItem::getCount, (a, b) -> b)));
+        Mono<Map<Long, Integer>> countsMono = resolveItemCounts(username);
 
         Flux<Long> pageIdsFlux = itemQueryRepository.findItemIds(
                 normalizedSearch,
@@ -87,14 +89,32 @@ public class ItemService {
                 });
     }
 
-    public Mono<ItemView> getItemById(long id) {
+    public Mono<ItemView> getItemById(long id, String username) {
         Mono<Item> itemMono = itemCatalogService.getItem(id)
                 .switchIfEmpty(Mono.error(new ItemNotFoundException(id)));
-        Mono<Integer> countMono = cartItemRepository.findByItemId(id)
-                .map(CartItem::getCount)
-                .defaultIfEmpty(0);
+        Mono<Integer> countMono = resolveItemCount(username, id);
         return Mono.zip(itemMono, countMono)
                 .map(t -> itemViewMapper.toView(t.getT1(), t.getT2()));
+    }
+
+    private Mono<Map<Long, Integer>> resolveItemCounts(String username) {
+        if (username == null || username.isBlank()) {
+            return Mono.just(Map.of());
+        }
+        return appUserRepository.findByUsername(username)
+                .flatMap(user -> cartItemRepository.findAllByUserId(user.getId()).collectList())
+                .map(list -> list.stream().collect(Collectors.toMap(CartItem::getItemId, CartItem::getCount, (a, b) -> b)))
+                .defaultIfEmpty(Map.of());
+    }
+
+    private Mono<Integer> resolveItemCount(String username, long itemId) {
+        if (username == null || username.isBlank()) {
+            return Mono.just(0);
+        }
+        return appUserRepository.findByUsername(username)
+                .flatMap(user -> cartItemRepository.findByUserIdAndItemId(user.getId(), itemId))
+                .map(CartItem::getCount)
+                .defaultIfEmpty(0);
     }
 
     private String normalizeSearch(String search) {

@@ -8,6 +8,7 @@ import ru.yandex.practicum.mymarket.model.CartItem;
 import ru.yandex.practicum.mymarket.model.CustomerOrder;
 import ru.yandex.practicum.mymarket.model.Item;
 import ru.yandex.practicum.mymarket.model.OrderItem;
+import ru.yandex.practicum.mymarket.repository.AppUserRepository;
 import ru.yandex.practicum.mymarket.repository.CustomerOrderRepository;
 import ru.yandex.practicum.mymarket.repository.OrderItemRepository;
 import org.springframework.stereotype.Service;
@@ -29,43 +30,50 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final ItemCatalogService itemCatalogService;
     private final PaymentService paymentService;
+    private final AppUserRepository appUserRepository;
 
     public OrderService(
             CartService cartService,
             CustomerOrderRepository customerOrderRepository,
             OrderItemRepository orderItemRepository,
             ItemCatalogService itemCatalogService,
-            PaymentService paymentService
+            PaymentService paymentService,
+            AppUserRepository appUserRepository
     ) {
         this.cartService = cartService;
         this.customerOrderRepository = customerOrderRepository;
         this.orderItemRepository = orderItemRepository;
         this.itemCatalogService = itemCatalogService;
         this.paymentService = paymentService;
+        this.appUserRepository = appUserRepository;
     }
 
     @Transactional
-    public Mono<Long> placeOrder() {
-        return cartService.getCartSnapshot()
+    public Mono<Long> placeOrder(String username) {
+        return cartService.getCartSnapshot(username)
                 .flatMap(cartItems -> {
                     if (cartItems.isEmpty()) {
                         return Mono.error(new EmptyCartException());
                     }
                     return computeTotal(cartItems)
                             .flatMap(total -> paymentService.chargeOrderAmount(total)
-                                    .then(persistOrderAfterPayment(cartItems, total)));
+                                    .then(persistOrderAfterPayment(username, cartItems, total)));
                 });
     }
 
-    private Mono<Long> persistOrderAfterPayment(List<CartItem> cartItems, BigDecimal total) {
-        CustomerOrder order = new CustomerOrder();
-        order.setTotalSum(total);
-        return customerOrderRepository.save(order)
-                .flatMap(saved -> buildOrderLines(saved.getId(), cartItems)
-                        .collectList()
-                        .flatMap(lines -> orderItemRepository.saveAll(lines)
-                                .then(cartService.clear())
-                                .thenReturn(saved.getId())));
+    private Mono<Long> persistOrderAfterPayment(String username, List<CartItem> cartItems, BigDecimal total) {
+        return resolveUserId(username)
+                .flatMap(userId -> {
+                    CustomerOrder order = new CustomerOrder();
+                    order.setTotalSum(total);
+                    order.setUserId(userId);
+                    return customerOrderRepository.save(order)
+                            .flatMap(saved -> buildOrderLines(saved.getId(), cartItems)
+                                    .collectList()
+                                    .flatMap(lines -> orderItemRepository.saveAll(lines)
+                                            .then(cartService.clear(username))
+                                            .thenReturn(saved.getId())));
+                });
     }
 
     private Mono<BigDecimal> computeTotal(List<CartItem> cartItems) {
@@ -88,16 +96,24 @@ public class OrderService {
                         }));
     }
 
-    public Mono<List<OrderView>> getOrders() {
-        return customerOrderRepository.findAll()
+    public Mono<List<OrderView>> getOrders(String username) {
+        return resolveUserId(username)
+                .flatMapMany(customerOrderRepository::findAllByUserIdOrderByIdDesc)
                 .concatMap(this::toOrderView)
                 .collectList();
     }
 
-    public Mono<OrderView> getOrderById(long orderId) {
-        return customerOrderRepository.findById(orderId)
+    public Mono<OrderView> getOrderById(String username, long orderId) {
+        return resolveUserId(username)
+                .flatMap(userId -> customerOrderRepository.findByIdAndUserId(orderId, userId))
                 .switchIfEmpty(Mono.error(new OrderNotFoundException(orderId)))
                 .flatMap(this::toOrderView);
+    }
+
+    private Mono<Long> resolveUserId(String username) {
+        return appUserRepository.findByUsername(username)
+                .switchIfEmpty(Mono.error(new IllegalArgumentException("User not found: " + username)))
+                .map(user -> user.getId());
     }
 
     private Mono<OrderView> toOrderView(CustomerOrder order) {

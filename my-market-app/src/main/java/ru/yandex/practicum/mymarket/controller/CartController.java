@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.reactive.result.view.Rendering;
 
+import java.security.Principal;
+
 import reactor.core.publisher.Mono;
 
 @Controller
@@ -28,25 +30,25 @@ public class CartController {
     }
 
     @GetMapping("/cart/items")
-    public Mono<Rendering> getCart() {
-        return renderCart(cartService.getCartPageData(), null);
+    public Mono<Rendering> getCart(Principal principal) {
+        return renderCart(cartService.getCartPageData(principal.getName()), null);
     }
 
     @PostMapping("/cart/items")
-    public Mono<Rendering> changeCartItem(@ModelAttribute CartItemChangeForm form) {
-        return cartService.changeItemCount(form.id(), form.action())
-                .then(renderCart(cartService.getCartPageData(), null));
+    public Mono<Rendering> changeCartItem(@ModelAttribute CartItemChangeForm form, Principal principal) {
+        return cartService.changeItemCount(principal.getName(), form.id(), form.action())
+                .then(renderCart(cartService.getCartPageData(principal.getName()), null));
     }
 
     @PostMapping("/buy")
-    public Mono<Rendering> buy() {
-        return orderService.placeOrder()
+    public Mono<Rendering> buy(Principal principal) {
+        return orderService.placeOrder(principal.getName())
                 .map(orderId -> Rendering.redirectTo("/orders/" + orderId + "?newOrder=true").build())
                 .onErrorResume(InsufficientPaymentBalanceException.class,
-                        e -> renderCart(cartService.getCartPageData(),
+                        e -> renderCart(cartService.getCartPageData(principal.getName()),
                                 "Оплата не прошла: недостаточно средств на счёте."))
                 .onErrorResume(PaymentServiceUnavailableException.class,
-                        e -> renderCart(cartService.getCartPageData(),
+                        e -> renderCart(cartService.getCartPageData(principal.getName()),
                                 e.getMessage() != null ? e.getMessage()
                                         : "Сервис платежей недоступен. Попробуйте позже."));
     }

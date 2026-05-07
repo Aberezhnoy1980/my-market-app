@@ -35,6 +35,7 @@ class PaymentServiceIntegrationTest {
 	@DynamicPropertySource
 	static void registerPaymentBaseUrl(DynamicPropertyRegistry registry) {
 		registry.add("payment.service.base-url", () -> "http://127.0.0.1:" + PAYMENT_SERVER.getPort());
+		registry.add("payment.oauth2.enabled", () -> "false");
 	}
 
 	@AfterAll
@@ -106,6 +107,15 @@ class PaymentServiceIntegrationTest {
 	@Test
 	void chargeOrderAmountServerError() {
 		PAYMENT_SERVER.enqueue(new MockResponse().setResponseCode(500));
+
+		StepVerifier.create(paymentService.chargeOrderAmount(new BigDecimal("10.00")))
+				.expectError(PaymentServiceUnavailableException.class)
+				.verify();
+	}
+
+	@Test
+	void chargeOrderAmountUnauthorizedClient() {
+		PAYMENT_SERVER.enqueue(new MockResponse().setResponseCode(401));
 
 		StepVerifier.create(paymentService.chargeOrderAmount(new BigDecimal("10.00")))
 				.expectError(PaymentServiceUnavailableException.class)

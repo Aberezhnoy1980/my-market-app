@@ -4,6 +4,9 @@
 ![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.x-6DB33F?logo=springboot&logoColor=white)
 ![Spring WebFlux](https://img.shields.io/badge/Spring-WebFlux-6DB33F?logo=spring&logoColor=white)
+![Spring Security](https://img.shields.io/badge/Spring_Security-6DB33F?logo=springsecurity&logoColor=white)
+![OAuth2](https://img.shields.io/badge/OAuth2-2.0-2F80ED)
+![Keycloak](https://img.shields.io/badge/Keycloak-26-4D4D4D?logo=keycloak&logoColor=white)
 ![OpenAPI](https://img.shields.io/badge/OpenAPI-3.0-6BA539?logo=openapiinitiative&logoColor=white)
 ![Spring Data R2DBC](https://img.shields.io/badge/Spring_Data_R2DBC-Reactive-59666C?logo=postgresql&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
@@ -23,6 +26,9 @@
 - JDBC + Liquibase (миграции схемы при старте; БД — PostgreSQL или H2 в тестах)
 - PostgreSQL (main/runtime profile)
 - Spring Data Redis Reactive + Lettuce (кеш карточек и списка товаров: `mymarket:item:{id}`, `mymarket:items:all`)
+- Spring Security (form login для витрины, CSRF) + OAuth2 Client (`client_credentials`)
+- OAuth2 Resource Server (JWT) в сервисе платежей
+- Keycloak (Authorization Server, realm `my-market`)
 - Maven
 - Docker
 - GitHub Actions (CI)
@@ -37,6 +43,8 @@
 - Страница товара: просмотр деталей и изменение количества.
 - Корзина: список позиций, изменение количества, удаление, подсчет суммы.
 - Заказы: оформление покупки, список заказов, страница конкретного заказа.
+- Доступ: анонимный пользователь может только просматривать витрину/карточку, действия с корзиной и заказами доступны только после логина.
+- Межсервисная безопасность: витрина обращается к сервису платежей по OAuth2 `Client Credentials`, сервис платежей принимает только валидный JWT.
 
 ## Эндпоинты
 
@@ -71,6 +79,7 @@
 - JDK 21
 - Maven 3.9+
 - PostgreSQL (для main profile)
+- Docker (для сценария с Keycloak/Redis/PostgreSQL через `docker compose`)
 
 Сборка:
 
@@ -90,6 +99,8 @@
 ./mvnw -pl my-market-payment spring-boot:run
 ```
 
+Для локального запуска OAuth2 без `docker compose` поднимите Keycloak отдельно и задайте env из раздела ниже.
+
 ## Профили
 
 - `default`/`main`: PostgreSQL + Liquibase.
@@ -101,8 +112,57 @@
 - `SPRING_DATASOURCE_USERNAME`
 - `SPRING_DATASOURCE_PASSWORD`
 - `PAYMENT_SERVICE_BASE_URL` — базовый URL сервиса платежей для сгенерированного клиента (по умолчанию `http://localhost:8081`).
+- `PAYMENT_OAUTH2_ENABLED` — включение OAuth2 для HTTP-клиента витрины (`true` по умолчанию; в integration-тестах отключается).
+- `PAYMENT_OAUTH2_CLIENT_ID`, `PAYMENT_OAUTH2_CLIENT_SECRET` — креды confidential client витрины.
+- `KEYCLOAK_TOKEN_URI` — token endpoint authorization server (для получения access token по `client_credentials`).
+- `KEYCLOAK_ISSUER_URI` — issuer URI для JWT-валидации в сервисе платежей.
 - `SPRING_DATA_REDIS_HOST`, `SPRING_DATA_REDIS_PORT` — Redis для кеша товаров (в Docker Compose задано `redis` / `6379`).
 - `ITEMS_CACHE_TTL` — время жизни записей в кеше (по умолчанию `PT3M`).
+
+## OAuth2 и Keycloak
+
+- Realm-файл: `infra/keycloak/my-market-realm.json`.
+- Клиенты в realm:
+  - `my-market-app-client` — confidential client для витрины (`client_credentials`);
+  - `my-market-payment-resource` — bearer-only ресурсный клиент сервиса платежей.
+- Runtime-поток:
+  - витрина получает access token у Keycloak;
+  - добавляет Bearer token в вызовы `/api/v1/balance` и `/api/v1/payments`;
+  - сервис платежей валидирует JWT по `issuer-uri`.
+
+## Smoke-check (обязательно перед PR)
+
+Минимальный регресс-пакет для локальной проверки после изменений в security/integration:
+
+1. Поднять стенд:
+
+```bash
+docker compose up --build --force-recreate
+```
+
+1. Happy path:
+
+- открыть `http://localhost:8080`;
+- логин `user/password`;
+- добавить товар в корзину и выполнить покупку;
+- проверить, что заказ появился в `GET /orders`, а баланс изменился.
+
+1. Session/logout sanity:
+
+- выйти (`/logout`) и зайти снова;
+- убедиться, что данные пользователя (orders/cart/balance) консистентны после новой сессии.
+
+1. Negative OAuth2 path (межсервисная авторизация):
+
+- временно задать неверный `PAYMENT_OAUTH2_CLIENT_SECRET` в `docker-compose.yml` для `app`;
+- перезапустить `docker compose up --build --force-recreate`;
+- выполнить покупку и убедиться, что запрос к payment не проходит по OAuth2 (ожидаем controlled failure), а витрина не падает целиком;
+- вернуть корректный secret и повторить happy path.
+
+1. Если менялись Liquibase changelog-файлы:
+
+- не редактировать уже применённые changeset без `validCheckSum`/follow-up changeset;
+- при проблемах валидации проверять `databasechangelog` и logs `app`.
 
 ## Тесты и профиль `test`
 
@@ -111,7 +171,7 @@
 ### Слои
 
 | Что | Как | Зачем |
-|-----|-----|--------|
+| ----- | ----- | -------- |
 | Сервисы | Обычные unit-тесты (`JUnit` + `Mockito`), без Spring-контекста | Чистая логика, быстро и стабильно |
 | Контроллеры | `@WebFluxTest(конкретный Controller)` + `WebTestClient`, сервисы — `@MockBean` (узкий web-slice, без полного контекста и БД) | Контракт HTTP (статусы, редиректы, параметры) |
 | Контекст приложения | `MyMarketAppApplicationTests` — smoke (`contextLoads`) на H2 + **Testcontainers Redis** (без Docker тест пропускается) | Сборка с Redis и кешем в профиле `test` |
@@ -166,7 +226,19 @@ docker run --rm -p 8080:8080 my-market-app:local
 docker compose up --build
 ```
 
-После старта: витрина — `http://localhost:8080`, сервис платежей — `http://localhost:8081`. Сервис `app` в compose получает `PAYMENT_SERVICE_BASE_URL=http://payment:8081`, чтобы витрина ходила в контейнер платежей.
+После старта:
+
+- витрина: `http://localhost:8080`
+- сервис платежей: `http://localhost:8081`
+- Keycloak: `http://localhost:8082` (admin: `admin` / `admin`)
+
+В `docker compose` уже настроены:
+
+- `PAYMENT_SERVICE_BASE_URL=http://payment:8081`
+- `KEYCLOAK_TOKEN_URI=http://keycloak:8080/realms/my-market/protocol/openid-connect/token`
+- `KEYCLOAK_ISSUER_URI=http://keycloak:8080/realms/my-market`
+- `PAYMENT_OAUTH2_CLIENT_ID=my-market-app-client`
+- `PAYMENT_OAUTH2_CLIENT_SECRET=my-market-app-client-secret`
 
 Образ сервиса платежей отдельно:
 
